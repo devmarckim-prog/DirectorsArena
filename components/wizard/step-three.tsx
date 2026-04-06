@@ -14,6 +14,7 @@ interface StepThreeProps {
   formData: any;
   setFormData: (data: any) => void;
   onProduce: () => void;
+  onNext?: () => void;
 }
 
 const WORLD_SETTINGS = [

@@ -8,7 +8,7 @@ export const BlockSchema = z.object({
   character_name: z.string().optional(),
   content: z.string(),
   order_index: z.number(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // 2. Scene Instance Schema
@@ -20,7 +20,7 @@ export const SceneSchema = z.object({
   time_of_day: z.string(),
   summary: z.string().optional(),
   status: z.enum(['pending', 'draft', 'qc_passed', 'qc_failed', 'final']).default('pending'),
-  qc_report: z.record(z.any()).optional(),
+  qc_report: z.record(z.string(), z.any()).optional(),
   blocks: z.array(BlockSchema).optional(),
 });
 

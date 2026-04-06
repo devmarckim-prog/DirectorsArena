@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { StepOne } from "@/components/wizard/step-one";
 import { StepTwo } from "@/components/wizard/step-two";
 import { StepThree } from "@/components/wizard/step-three";
@@ -29,12 +28,12 @@ export default function CreateProjectPage() {
   const handleProduce = useCallback(() => {
     setIsProducing(true);
     
-    // Step 6: Credit Deduction (20 Credits)
+    // Credit Deduction Execution (20 C)
     const currentCredits = parseInt(localStorage.getItem("directors_arena_credits") || "1200");
     const newCredits = Math.max(0, currentCredits - 20);
     localStorage.setItem("directors_arena_credits", newCredits.toString());
 
-    // Save project with BAKING status
+    // Save as BAKING
     const newProject = {
       id: `project-${Date.now()}`,
       platform: formData.platform,
@@ -42,6 +41,7 @@ export default function CreateProjectPage() {
       episodes: formData.episodes,
       duration: formData.duration,
       world: formData.world.setting,
+      characterCount: formData.characters.length || 3,
       logline: formData.logline,
       status: 'BAKING',
       progress: 0,
@@ -52,7 +52,7 @@ export default function CreateProjectPage() {
     const projects = saved ? JSON.parse(saved) : [];
     localStorage.setItem("directors_arena_projects", JSON.stringify([newProject, ...projects]));
 
-    // 1s Fade-to-Black Re-implementation
+    // 1.0s Fade-to-Black Cinematic Sequence
     setTimeout(() => {
       router.push("/dashboard");
     }, 1000);
@@ -60,10 +60,9 @@ export default function CreateProjectPage() {
 
   return (
     <div className="min-h-screen text-neutral-100 font-sans overflow-x-hidden relative selection:bg-brand-gold/30 selection:text-white pt-24">
-      
-      {/* Act Tracker */}
+      {/* Act Tracker (Transparent Background) */}
       <main className="relative pt-8 pb-20 max-w-7xl mx-auto px-6 min-h-screen flex flex-col">
-        <div className="flex justify-center mb-16">
+        <div className="flex justify-center mb-16 px-10">
           <div className="flex items-center space-x-12">
             {[1, 2, 3].map((step) => (
               <div key={step} className="flex items-center space-x-4">
@@ -87,7 +86,7 @@ export default function CreateProjectPage() {
               <StepTwo key="step2" formData={formData} setFormData={setFormData} onNext={nextStep} />
             )}
             {currentStep === 3 && (
-              <StepThree key="step3" formData={formData} setFormData={setFormData} onNext={handleProduce} />
+              <StepThree key="step3" formData={formData} setFormData={setFormData} onProduce={handleProduce} />
             )}
           </AnimatePresence>
         </div>
@@ -95,44 +94,40 @@ export default function CreateProjectPage() {
         {/* Control Footer */}
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center space-x-6 z-40 bg-neutral-950/40 backdrop-blur-md px-8 py-4 rounded-full border border-white/5">
            {currentStep > 1 && (
-             <button 
-               onClick={prevStep}
-               className="text-neutral-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest px-4"
-             >
+             <button onClick={prevStep} className="text-neutral-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest px-4">
                Back
              </button>
            )}
            <div className="w-[1px] h-4 bg-white/10" />
            <button 
              onClick={currentStep < 3 ? nextStep : handleProduce}
-             className="group flex items-center space-x-3 bg-brand-gold px-8 py-3 rounded-full hover:scale-105 transition-all shadow-[0_0_20px_rgba(197,160,89,0.3)]"
+             className="group flex items-center space-x-3 bg-brand-gold px-8 py-3.5 rounded-full hover:scale-105 transition-all shadow-[0_0_30px_rgba(197,160,89,0.3)]"
            >
              <span className="text-black text-[11px] font-black uppercase tracking-widest leading-none">
                {currentStep < 3 ? "Next Act" : "Produce Scenario"}
              </span>
-             <div className="w-4 h-4 bg-black/10 rounded-full flex items-center justify-center group-hover:bg-black/20 transition-colors">
-                <ArrowRight size={10} className="text-black" />
-             </div>
+             <ArrowRight size={12} className="text-black ml-1 group-hover:translate-x-1 transition-transform" />
            </button>
         </div>
       </main>
 
-      {/* Production Overlay Restoration */}
+      {/* Production Overlay Restoration (V1.01) */}
       <AnimatePresence>
         {isProducing && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center"
+            className="fixed inset-0 bg-black z-[300] flex flex-col items-center justify-center p-10"
           >
             <motion.div
               animate={{ opacity: [0, 1, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}
               className="text-center"
             >
-              <p className="text-[10px] font-black text-brand-gold uppercase tracking-[1em] mb-4">Finalizing Scene</p>
-              <p className="text-4xl font-black text-white italic tracking-tighter uppercase">Developing...</p>
+              <div className="w-16 h-[1px] bg-brand-gold/30 mx-auto mb-6" />
+              <p className="text-[10px] font-black text-brand-gold uppercase tracking-[1em] mb-4">Finalizing Narrative Block</p>
+              <p className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">Developing...</p>
             </motion.div>
           </motion.div>
         )}

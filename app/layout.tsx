@@ -26,14 +26,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-brand-gold/30 selection:text-white`}>
-        {/* Unified Cinematic Void Background */}
+        {/* Unified Cinematic Void Background: Fixed once at the root */}
         <div className="fixed inset-0 bg-neutral-950 bg-[radial-gradient(circle_at_50%_0%,_#1A1A1A_0%,_#050505_100%)] -z-50" />
 
-        {/* Global Fixed Branding */}
+        {/* Global Fixed Header (Immutable Branding) */}
         <header className="fixed top-0 left-0 right-0 h-24 flex items-center justify-between px-10 z-[100] pointer-events-none">
           <div className="flex items-center space-x-6 pointer-events-auto cursor-pointer">
             <div className="w-10 h-[1px] bg-white/10" />
-            <span className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em]">Engine: 1.0.4-VOID</span>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em]">Engine: 1.0.4-VOID</span>
+              <span className="text-[10px] font-mono font-black text-[#C5A059]/40 tracking-widest mt-0.5">v1.01 RELAY</span>
+            </div>
           </div>
 
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
@@ -43,13 +46,14 @@ export default function RootLayout({
               width={160} 
               height={40} 
               className="drop-shadow-[0_0_20px_rgba(197,160,89,0.3)]"
+              priority
             />
           </div>
 
           <div className="flex items-center space-x-6 pointer-events-auto">
             <div className="flex items-center space-x-3 px-5 py-2 bg-brand-gold/5 border border-brand-gold/10 rounded-full">
               <div className="w-1.5 h-1.5 bg-brand-gold rounded-full animate-pulse shadow-[0_0_10px_rgba(197,160,89,0.5)]" />
-              <span className="text-[10px] font-black text-brand-gold uppercase tracking-[0.3em]">1,200 Credits</span>
+              <span id="credits-badge" className="text-[10px] font-black text-brand-gold uppercase tracking-[0.3em]">1,200 Credits</span>
             </div>
           </div>
         </header>

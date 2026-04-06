@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { User, Sparkles } from "lucide-react";
+import { User, Sparkles, Globe, Users } from "lucide-react";
 import Image from "next/image";
 
 export interface Project {
@@ -20,6 +20,14 @@ export interface Project {
 
 export function ProjectCard({ project }: { project: Project }) {
   const isBaking = project.status === 'BAKING';
+
+  const getMilestone = (progress: number) => {
+    if (progress <= 20) return "Architecting Structure";
+    if (progress <= 45) return "Synthesizing Personas";
+    if (progress <= 70) return "Mapping Tension";
+    if (progress <= 90) return "Rendering Atmosphere";
+    return "Finalizing Script";
+  };
 
   return (
     <div className="relative w-[320px] h-[450px] group perspective-1000">
@@ -67,22 +75,28 @@ export function ProjectCard({ project }: { project: Project }) {
 
         {/* Content Area */}
         <div className="h-full w-full flex flex-col justify-end p-8 relative z-10">
-          {/* Baking Pulse Center */}
+          {/* Baking Pulse Center & Milestones */}
           {isBaking && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+            <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col items-center justify-center p-8">
               <motion.div 
                 animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="w-24 h-24 rounded-full bg-brand-gold/10 blur-2xl"
+                className="w-32 h-32 rounded-full bg-brand-gold/10 blur-2xl"
               />
-              <div className="text-center mt-4">
-                <p className="text-[10px] font-black text-brand-gold/60 uppercase tracking-[0.5em] animate-pulse">Synthesizing</p>
-                <p className="text-2xl font-black text-white italic mt-2">{Math.round(project.progress)}%</p>
+              <div className="text-center mt-6">
+                <p className="text-[10px] font-black text-brand-gold uppercase tracking-[0.5em] animate-pulse">
+                  {getMilestone(project.progress)}
+                </p>
+                <div className="flex items-center justify-center space-x-4 mt-3">
+                  <div className="h-[1px] w-8 bg-brand-gold/20" />
+                  <p className="text-3xl font-black text-white italic tabular-nums">{Math.round(project.progress)}%</p>
+                  <div className="h-[1px] w-8 bg-brand-gold/20" />
+                </div>
               </div>
             </div>
           )}
 
-          {/* Static Content (visible when COMPLETED or on Hover) */}
+          {/* Static Content */}
           {!isBaking && (
             <motion.div 
               initial={{ opacity: 1 }}
@@ -92,15 +106,33 @@ export function ProjectCard({ project }: { project: Project }) {
                 {project.genre} <br/> Narrative
               </h3>
               
-              {/* Bottom Specs */}
-              <div className="flex items-center space-x-6 pt-4 border-t border-white/5 opacity-40">
+              {/* Bottom Specs & Metadata */}
+              <div className="grid grid-cols-2 gap-y-4 pt-4 border-t border-white/5 opacity-60">
                 <div className="flex flex-col">
-                   <span className="text-[8px] font-black uppercase text-neutral-500 tracking-[0.2em]">Episodes</span>
-                   <span className="text-xs font-black text-white">{project.episodes || "--"}</span>
+                   <div className="flex items-center space-x-2 text-neutral-500 mb-1">
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em]">Episodes</span>
+                   </div>
+                   <span className="text-xs font-black text-white">{project.episodes || "1"}</span>
                 </div>
                 <div className="flex flex-col">
-                   <span className="text-[8px] font-black uppercase text-neutral-500 tracking-[0.2em]">Duration</span>
-                   <span className="text-xs font-black text-white">{project.duration || "--"}m</span>
+                   <div className="flex items-center space-x-2 text-neutral-500 mb-1">
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em]">Duration</span>
+                   </div>
+                   <span className="text-xs font-black text-white">{project.duration || "120"}m</span>
+                </div>
+                <div className="flex flex-col">
+                   <div className="flex items-center space-x-2 text-neutral-500 mb-1">
+                      <Globe size={10} className="text-brand-gold/50" />
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em]">World</span>
+                   </div>
+                   <span className="text-xs font-black text-white truncate pr-2">{project.world || "Contemporary"}</span>
+                </div>
+                <div className="flex flex-col">
+                   <div className="flex items-center space-x-2 text-neutral-500 mb-1">
+                      <Users size={10} className="text-brand-gold/50" />
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em]">Souls</span>
+                   </div>
+                   <span className="text-xs font-black text-white">{project.characterCount || "3"}</span>
                 </div>
               </div>
             </motion.div>
@@ -109,27 +141,34 @@ export function ProjectCard({ project }: { project: Project }) {
           {/* Hover Overlay Logline */}
           {!isBaking && (
             <motion.div 
-              className="absolute inset-0 bg-neutral-950/90 backdrop-blur-md p-10 flex flex-col justify-center items-center text-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              className="absolute inset-0 bg-neutral-950/90 backdrop-blur-xl p-10 flex flex-col justify-center items-center text-center opacity-0 group-hover:opacity-100 transition-all duration-500"
             >
-              <div className="w-8 h-[1px] bg-brand-gold/40 mb-6" />
-              <p className="text-sm font-black text-brand-gold uppercase tracking-[0.3em] mb-4 italic">Logline</p>
-              <p className="text-lg font-black text-white leading-relaxed italic line-clamp-4">
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                className="w-12 h-[1px] bg-brand-gold/40 mb-8" 
+              />
+              <p className="text-[10px] font-black text-brand-gold uppercase tracking-[0.5em] mb-4 italic">Logline Analysis</p>
+              <p className="text-xl font-black text-white leading-relaxed italic line-clamp-4">
                 "{project.logline}"
               </p>
-              <button className="mt-12 text-[10px] font-black text-neutral-500 hover:text-white transition-colors uppercase tracking-[0.4em]">
-                 Enter Production →
-              </button>
+              <div className="mt-12 group/btn">
+                <button className="text-[10px] font-black text-neutral-600 group-hover/btn:text-white transition-colors uppercase tracking-[0.5em]">
+                   Enter Production Studio
+                </button>
+                <motion.div className="h-[1px] w-0 group-hover/btn:w-full bg-brand-gold transition-all duration-500 mt-2" />
+              </div>
             </motion.div>
           )}
         </div>
 
-        {/* Step 2 Progress Bar Restoration */}
+        {/* Baking Gold Glow Progress Bar */}
         {isBaking && (
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5">
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/5">
              <motion.div 
                initial={{ width: 0 }}
                animate={{ width: `${project.progress}%` }}
-               className="h-full bg-brand-gold shadow-[0_0_10px_rgba(197,160,89,0.8)]"
+               className="h-full bg-brand-gold shadow-[0_0_20px_rgba(197,160,89,0.8)]"
              />
           </div>
         )}

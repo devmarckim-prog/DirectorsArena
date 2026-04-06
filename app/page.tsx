@@ -9,7 +9,7 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center relative">
-      {/* Void Gateway UI */}
+      {/* Void Gateway UI (Minimalist & Transparent) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -23,12 +23,12 @@ export default function LandingPage() {
 
         <button 
           onClick={() => router.push("/dashboard")}
-          className="group relative flex items-center space-x-6 bg-white/5 backdrop-blur-xl border border-brand-gold/30 px-10 py-5 rounded-full hover:bg-brand-gold/10 hover:shadow-[0_0_30px_rgba(197,160,89,0.2)] transition-all duration-500"
+          className="group relative flex items-center space-x-6 bg-white/5 backdrop-blur-xl border border-brand-gold/30 px-10 py-5 rounded-full hover:bg-brand-gold/10 hover:shadow-[0_0_40px_rgba(197,160,89,0.3)] transition-all duration-700"
         >
           <span className="text-brand-gold text-sm font-black uppercase tracking-[0.4em] ml-4">
             무료로 작가되어보기
           </span>
-          <div className="w-10 h-10 rounded-full bg-brand-gold/20 flex items-center justify-center group-hover:bg-brand-gold transition-colors duration-500">
+          <div className="w-10 h-10 rounded-full bg-brand-gold/20 flex items-center justify-center group-hover:bg-brand-gold transition-all duration-700">
             <ArrowRight size={18} className="text-brand-gold group-hover:text-black transition-colors" />
           </div>
         </button>

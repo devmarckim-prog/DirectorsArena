@@ -12,6 +12,7 @@ interface StepOneProps {
     duration: number;
   };
   setFormData: (data: any) => void;
+  onNext: () => void;
 }
 
 const PLATFORMS = [
