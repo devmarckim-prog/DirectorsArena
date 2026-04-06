@@ -17,6 +17,8 @@ export interface Project {
   logline: string;
   status: 'BAKING' | 'COMPLETED';
   progress: number;
+  characters?: any[];
+  scenes?: any[];
 }
 
 export function ProjectCard({ project }: { project: Project }) {

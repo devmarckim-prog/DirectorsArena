@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepOne } from "@/components/wizard/step-one";
 import { StepTwo } from "@/components/wizard/step-two";
@@ -51,7 +51,7 @@ export default function CreateProjectPage() {
       duration: formData.duration,
       world: formData.world.setting,
       logline: formData.logline,
-      synopsis: "The narrative seed planted in the Void begins to sprout. This synopsis represents the expanded vision for the " + formData.genres[0] + " epic.",
+      synopsis: "The narrative seed planted in the Void begins to sprout. This synopsis represents the expanded vision for the " + formData.genres[0] + " epic. We analyze the thematic depth and visual continuity to ensure maximum narrative impact.",
       internalConflict: "The struggle between the protagonist's past trauma and their current mission to find the truth.",
       externalConflict: "A powerful syndicate controlling the city from the shadows, determined to keep the secret buried.",
       characters: formData.characters, // Full Soul Array Persistence
@@ -112,15 +112,27 @@ export default function CreateProjectPage() {
              </button>
            )}
            <div className="w-[1px] h-4 bg-white/10" />
-           <button 
-             onClick={currentStep < 3 ? nextStep : handleProduce}
-             className="group flex items-center space-x-3 bg-brand-gold px-8 py-3.5 rounded-full hover:scale-105 transition-all shadow-[0_0_30px_rgba(197,160,89,0.3)]"
-           >
-             <span className="text-black text-[11px] font-black uppercase tracking-widest leading-none">
-               {currentStep < 3 ? "Next Act" : "Produce Scenario"}
-             </span>
-             <ArrowRight size={12} className="text-black ml-1 group-hover:translate-x-1 transition-transform" />
-           </button>
+           {currentStep < 3 ? (
+             <button 
+               onClick={nextStep}
+               className="group flex items-center space-x-3 bg-brand-gold px-8 py-3.5 rounded-full hover:scale-105 transition-all shadow-[0_0_30px_rgba(197,160,89,0.3)]"
+             >
+               <span className="text-black text-[11px] font-black uppercase tracking-widest leading-none">
+                 Next Act
+               </span>
+               <ArrowRight size={12} className="text-black ml-1 group-hover:translate-x-1 transition-transform" />
+             </button>
+           ) : (
+             <button 
+               onClick={handleProduce}
+               className="group flex items-center space-x-3 bg-brand-gold px-12 py-3.5 rounded-full hover:scale-105 transition-all shadow-[0_0_50px_rgba(197,160,89,0.4)]"
+             >
+               <span className="text-black text-[11px] font-black uppercase tracking-widest leading-none">
+                 Produce Scenario
+               </span>
+               <Sparkles size={12} className="text-black ml-1 animate-pulse" />
+             </button>
+           )}
         </div>
       </main>
 

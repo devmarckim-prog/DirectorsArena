@@ -230,9 +230,7 @@ export function StepThree({ formData, setFormData, onProduce }: StepThreeProps) 
                     exit={{ opacity: 0, scale: 0.95, y: 30 }}
                     className="p-12 rounded-[3.5rem] bg-neutral-950/80 border border-brand-gold/10 backdrop-blur-3xl space-y-16 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] relative"
                   >
-                    {/* Background Texture for Form */}
-                    <div className="absolute inset-0 opacity-[0.02] pointer-events-none" 
-                         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='none'/%3E%3Cpath d='M10 10l80 80M90 10L10 90' stroke='%23C5A059' stroke-width='0.5'/%3E%3C/svg%3E")`, backgroundSize: '100px 100px' }} />
+                    {/* Section: Biometrics & Identity */}
 
                     {/* Section: Biometrics & Identity */}
                     <div className="space-y-8">

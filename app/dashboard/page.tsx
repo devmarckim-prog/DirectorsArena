@@ -46,6 +46,8 @@ export default function DashboardPage() {
         progress: 100,
         characterCount: 4,
         world: "Tokyo Rain",
+        characters: [],
+        scenes: [],
       };
       setProjects([defaultProject]);
     }

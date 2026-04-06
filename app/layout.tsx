@@ -31,13 +31,7 @@ export default function RootLayout({
 
         {/* Global Fixed Header (Immutable Branding) */}
         <header className="fixed top-0 left-0 right-0 h-24 flex items-center justify-between px-10 z-[100] pointer-events-none">
-          <div className="flex items-center space-x-6 pointer-events-auto cursor-pointer">
-            <div className="w-10 h-[1px] bg-white/10" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em]">Engine: 1.0.4-VOID</span>
-              <span className="text-[10px] font-mono font-black text-[#C5A059]/40 tracking-widest mt-0.5">v1.01 RELAY</span>
-            </div>
-          </div>
+          <div className="flex items-center space-x-6 pointer-events-auto" />
 
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
             <Image 
