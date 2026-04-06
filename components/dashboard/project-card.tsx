@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { User, Sparkles, Globe, Users } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export interface Project {
   id: string | number;
@@ -153,9 +154,9 @@ export function ProjectCard({ project }: { project: Project }) {
                 "{project.logline}"
               </p>
               <div className="mt-12 group/btn">
-                <button className="text-[10px] font-black text-neutral-600 group-hover/btn:text-white transition-colors uppercase tracking-[0.5em]">
+                <Link href={`/dashboard/${project.id}`} className="text-[10px] font-black text-neutral-600 group-hover/btn:text-white transition-colors uppercase tracking-[0.5em]">
                    Enter Production Studio
-                </button>
+                </Link>
                 <motion.div className="h-[1px] w-0 group-hover/btn:w-full bg-brand-gold transition-all duration-500 mt-2" />
               </div>
             </motion.div>

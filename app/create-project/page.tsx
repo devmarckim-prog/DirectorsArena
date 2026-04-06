@@ -33,7 +33,16 @@ export default function CreateProjectPage() {
     const newCredits = Math.max(0, currentCredits - 20);
     localStorage.setItem("directors_arena_credits", newCredits.toString());
 
-    // Save as BAKING
+    // Generate 5 Mock Scenes for the Timeline v1.0
+    const mockScenes = [
+      { id: 's1', sceneNumber: 1, location: "Int. Rain-drenched Cafe", time: "Night", summary: "The protagonist waits for a contact who never arrives.", goal: "Establish Isolation", status: 'DRAFT' },
+      { id: 's2', sceneNumber: 2, location: "Ext. Neon Alleyway", time: "Night", summary: "A mysterious figure follows the protagonist into the shadows.", goal: "Introduce Antagonist", status: 'DRAFT' },
+      { id: 's3', sceneNumber: 3, location: "Int. Police Precinct", time: "Day", summary: "Evidence is found that links the protagonist to the scene.", goal: "Create Internal Pressure", status: 'DRAFT' },
+      { id: 's4', sceneNumber: 4, location: "Ext. City Overlook", time: "Dawn", summary: "A confrontation reveals the true stakes of the investigation.", goal: "Escalate Conflict", status: 'DRAFT' },
+      { id: 's5', sceneNumber: 5, location: "Int. Abandoned Warehouse", time: "Night", summary: "The final showdown where the secret is finally unveiled.", goal: "Climax & Resolution", status: 'DRAFT' },
+    ];
+
+    // Save with the full Souls and Blueprint v1.0 schema
     const newProject = {
       id: `project-${Date.now()}`,
       platform: formData.platform,
@@ -41,8 +50,12 @@ export default function CreateProjectPage() {
       episodes: formData.episodes,
       duration: formData.duration,
       world: formData.world.setting,
-      characterCount: formData.characters.length || 3,
       logline: formData.logline,
+      synopsis: "The narrative seed planted in the Void begins to sprout. This synopsis represents the expanded vision for the " + formData.genres[0] + " epic.",
+      internalConflict: "The struggle between the protagonist's past trauma and their current mission to find the truth.",
+      externalConflict: "A powerful syndicate controlling the city from the shadows, determined to keep the secret buried.",
+      characters: formData.characters, // Full Soul Array Persistence
+      scenes: mockScenes, // Timeline Rail Persistence
       status: 'BAKING',
       progress: 0,
       createdAt: new Date().toISOString(),
