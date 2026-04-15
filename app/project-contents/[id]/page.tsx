@@ -384,11 +384,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div className="max-w-[1700px] mx-auto relative min-h-screen">
           <HeroHeader project={project} metadata={metadata} masterMode={masterMode} scenarioTab={scenarioTab} setScenarioTab={setScenarioTab} productionTab={productionTab} setProductionTab={setProductionTab} />
 
-          <section className="px-12 lg:px-24 pb-40 relative z-10 mt-12">
+          <section className="px-12 lg:px-24 pb-60 relative z-10 mt-12">
             <AnimatePresence mode="wait">
               {masterMode === 'SCENARIO' && (
                 <motion.div key="scenario" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  
                   {scenarioTab === 'BIBLE' && <StoryBibleTab project={project} metadata={metadata} isSynopsisReady={isSynopsisReady} isCharactersReady={isCharactersReady} />}
                   {scenarioTab === 'SIMILAR' && <SimilarContentShell projectId={project.id} hasSynopsis={isSynopsisReady} metadata={metadata} />}
                   {scenarioTab === 'NAVIGATOR' && (
@@ -418,6 +417,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               )}
             </AnimatePresence>
           </section>
+
+          {/* Fixed Production Footer (v6.8) */}
+          <footer className="fixed bottom-0 left-20 right-0 h-16 bg-black/90 backdrop-blur-3xl border-t border-white/5 z-[100] flex items-center justify-between px-12 lg:px-24 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+             <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-3">
+                   <div className={cn("w-2 h-2 rounded-full", masterMode === 'SCENARIO' ? "bg-brand-gold animate-pulse" : "bg-blue-500")} />
+                   <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">{masterMode} Terminal Active</span>
+                </div>
+                <div className="h-4 w-[1px] bg-white/10" />
+                <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">Arena Protocol v3.3.4</span>
+             </div>
+             
+             <div className="flex items-center space-x-8">
+                <div className="flex items-center space-x-4 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                   <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Latency</span>
+                   <span className="text-[9px] font-black text-brand-gold uppercase tracking-widest">24ms</span>
+                </div>
+                <div className="flex items-center space-x-2 opacity-50 hover:opacity-100 transition-opacity cursor-help">
+                   <div className="w-1.5 h-1.5 rounded-full bg-brand-gold" />
+                   <span className="text-[9px] font-black text-white uppercase tracking-widest">Synchronized</span>
+                </div>
+             </div>
+          </footer>
 
           <div className="fixed top-0 left-20 w-full h-full pointer-events-none z-0">
              <div className="absolute top-[5%] left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] bg-brand-gold/[0.04] blur-[250px] rounded-full" />
