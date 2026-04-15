@@ -12,7 +12,7 @@ export function Header() {
   const isProjectPage = pathname?.includes('/project-contents/');
 
   return (
-    <header className="sticky top-0 left-0 right-0 h-24 z-50 border-b border-white/5 bg-black/90 backdrop-blur-md">
+    <header className="fixed top-0 left-0 right-0 h-24 z-50 bg-transparent">
       <div className="max-w-[1440px] mx-auto h-full flex items-center justify-between px-16 relative">
         {/* 2.1 FAR LEFT: Master Logo */}
         <div className="flex items-center">
@@ -27,26 +27,8 @@ export function Header() {
           </Link>
         </div>
 
-        {/* 2.2 CENTER: Primary Navigation */}
-        <nav className="flex items-center gap-12">
-          {[
-            { label: 'Projects', href: '/' },
-            { label: 'Scripts', href: '#' },
-            { label: 'AI Mentor', href: '#' },
-          ].map((link) => (
-            <Link 
-              key={link.label} 
-              href={link.href}
-              className={cn(
-                "text-[10px] font-black uppercase tracking-[0.4em] transition-all hover:text-brand-gold relative group",
-                pathname === link.href ? "text-brand-gold" : "text-neutral-500"
-              )}
-            >
-              {link.label}
-              <div className="absolute -bottom-1 left-0 w-0 h-px bg-brand-gold transition-all group-hover:w-full" />
-            </Link>
-          ))}
-        </nav>
+        {/* 2.2 CENTER: Primary Navigation (Menus Removed per Request) */}
+        <nav className="hidden lg:flex items-center gap-12" />
 
         {/* 3.2 FAR RIGHT: Top Utility Cluster */}
         <div className="flex justify-end items-center gap-4">
