@@ -1,22 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ededed;
+  --brand-gold: #C5A059;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-serif: "Old Standard TT", "Crimson Pro", serif;
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui;
   --color-brand-gold: #C5A059;
+  --color-brand-dark: #0A0A0A;
 }
 
 @keyframes draw {
-  0% { stroke-dashoffset: 48; }
-  50% { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: 48; }
+  0% { stroke-dashoffset: 200; stroke-dasharray: 200; }
+  50% { stroke-dashoffset: 0; stroke-dasharray: 200; }
+  100% { stroke-dashoffset: 200; stroke-dasharray: 200; }
 }
 
 @keyframes rotate-key {
@@ -25,21 +27,18 @@
   100% { transform: scale(1); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: radial-gradient(circle at center, #1A1A1A 0%, #050505 100%);
+  /* STEP 1.1: Global Background - Radial Gradient with central illumination */
+  background: radial-gradient(circle at center, #1A1A1A 0%, #000000 100%);
   background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
   position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
+/* STEP 1.1: Film Grain Overlay */
 body::before {
   content: "";
   position: fixed;
@@ -48,13 +47,40 @@ body::before {
   height: 100%;
   opacity: 0.03;
   pointer-events: none;
-  z-index: 1;
+  z-index: 9999;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
+/* STEP 1.2: Void Core Grid Lines */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -10;
+  background-image: 
+    linear-gradient(rgba(197, 160, 89, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(197, 160, 89, 0.05) 1px, transparent 1px);
+  background-size: 100px 100px;
+  mask-image: radial-gradient(circle at center, black, transparent 80%);
+}
+
 @layer utilities {
-  .perspective-1000 {
-    perspective: 1000px;
+  .font-cinematic-serif {
+    font-family: var(--font-serif);
+    text-transform: uppercase;
+    letter-spacing: -0.05em;
+    color: var(--brand-gold);
+    font-style: italic;
+  }
+  
+  .font-clean-sans {
+    font-family: var(--font-sans);
+    color: #D1D5DB;
+  }
+
+  .perspective-2000 {
+    perspective: 2000px;
   }
   .preserve-3d {
     transform-style: preserve-3d;

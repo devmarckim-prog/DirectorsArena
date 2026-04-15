@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import Image from "next/image";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -10,6 +11,11 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -24,35 +30,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-brand-gold/30 selection:text-white`}>
-        {/* Unified Cinematic Void Background: Fixed once at the root */}
-        <div className="fixed inset-0 bg-neutral-950 bg-[radial-gradient(circle_at_50%_0%,_#1A1A1A_0%,_#050505_100%)] -z-50" />
-
-        {/* Global Fixed Header (Immutable Branding) */}
-        <header className="fixed top-0 left-0 right-0 h-24 flex items-center justify-between px-10 z-[100] pointer-events-none">
-          <div className="flex items-center space-x-6 pointer-events-auto" />
-
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
-            <Image 
-              src="/logo-full-transparent.png" 
-              alt="Directors Arena Logo" 
-              width={160} 
-              height={40} 
-              className="drop-shadow-[0_0_20px_rgba(197,160,89,0.3)]"
-              priority
-            />
-          </div>
-
-          <div className="flex items-center space-x-6 pointer-events-auto">
-            <div className="flex items-center space-x-3 px-5 py-2 bg-brand-gold/5 border border-brand-gold/10 rounded-full">
-              <div className="w-1.5 h-1.5 bg-brand-gold rounded-full animate-pulse shadow-[0_0_10px_rgba(197,160,89,0.5)]" />
-              <span id="credits-badge" className="text-[10px] font-black text-brand-gold uppercase tracking-[0.3em]">1,200 Credits</span>
-            </div>
-          </div>
-        </header>
-
+    <html lang="en" suppressHydrationWarning>
+      <body 
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased selection:bg-brand-gold/30 selection:text-white`}
+        suppressHydrationWarning
+      >
+        <Header />
         {children}
+        <Footer />
       </body>
     </html>
   );

@@ -22,7 +22,7 @@ export default function LandingPage() {
         </div>
 
         <button 
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push("/project-list")}
           className="group relative flex items-center space-x-6 bg-white/5 backdrop-blur-xl border border-brand-gold/30 px-10 py-5 rounded-full hover:bg-brand-gold/10 hover:shadow-[0_0_40px_rgba(197,160,89,0.3)] transition-all duration-700"
         >
           <span className="text-brand-gold text-sm font-black uppercase tracking-[0.4em] ml-4">

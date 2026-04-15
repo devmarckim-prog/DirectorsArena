@@ -10,11 +10,11 @@ interface Character {
   name: string;
   job: string;
   gender: string;
-  age: number;
-  secret: string;
-  look: string;
-  void: string;
-  desire: string;
+  age?: number;
+  secret?: string;
+  look?: string;
+  void?: string;
+  desire?: string;
 }
 
 interface SoulsNexusProps {

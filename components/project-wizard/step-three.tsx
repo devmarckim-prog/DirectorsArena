@@ -485,16 +485,6 @@ export function StepThree({ formData, setFormData, onProduce }: StepThreeProps) 
         </AnimatePresence>
       </section>
 
-      {/* 3. Production Trigger */}
-      <div className="pt-20 border-t border-white/5">
-        <Button
-          onClick={onProduce}
-          className="w-full h-28 bg-brand-gold hover:bg-brand-gold/90 text-black font-black text-3xl uppercase tracking-[0.8em] rounded-[3rem] shadow-[0_0_80px_rgba(197,160,89,0.2)] hover:shadow-[0_0_100px_rgba(197,160,89,0.4)] transition-all hover:scale-[1.01] active:scale-[0.98] group overflow-hidden relative"
-        >
-          <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
-          <span className="relative drop-shadow-2xl">Produce Scenario</span>
-        </Button>
-      </div>
     </div>
   );
 }
