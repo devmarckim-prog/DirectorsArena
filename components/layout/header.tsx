@@ -10,6 +10,9 @@ import { cn } from "@/lib/utils";
 export function Header() {
   const pathname = usePathname();
   const isProjectPage = pathname?.includes('/project-contents/');
+  const isLandingPage = pathname === '/';
+
+  if (isLandingPage) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 h-24 z-[100] bg-black/80 backdrop-blur-md border-b border-white/5">
