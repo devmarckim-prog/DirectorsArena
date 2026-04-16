@@ -29,7 +29,7 @@ export function HeroHeader({
   const subTitle = titleParts[1] ? titleParts[1].trim() : (project.subtitle?.replace(/[()]/g, '') || project.title.toUpperCase());
 
   return (
-    <header className="sticky top-24 z-40 bg-[#050505] pt-12 pb-4 flex flex-col items-center border-b border-white/10 w-full backdrop-blur-3xl">
+    <header className="sticky top-24 z-40 bg-[#050505] pt-12 pb-4 flex flex-col items-center w-full backdrop-blur-3xl">
       {/* 2.0 PROTOCOL BADGES (Dynamic Binding v3.0) */}
       <div className="flex items-center gap-3 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
         <div className="px-4 py-1.5 border border-[#EAB308]/40 bg-[#EAB308]/5 rounded-full backdrop-blur-md">

@@ -15,7 +15,10 @@ export function Header() {
   if (isLandingPage) return null;
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-24 z-[100] bg-black/80 backdrop-blur-md border-b border-white/5">
+    <header className={cn(
+      "fixed top-0 left-0 right-0 h-24 z-[100] bg-black/80 backdrop-blur-md transition-all",
+      !isProjectPage && "border-b border-white/5"
+    )}>
       <div className="max-w-[1440px] mx-auto h-full flex items-center justify-between px-16 relative">
         {/* 2.1 FAR LEFT: Master Logo */}
         <div className="flex items-center">
