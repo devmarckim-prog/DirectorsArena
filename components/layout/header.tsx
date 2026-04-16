@@ -31,30 +31,24 @@ export function Header() {
         <nav className="hidden lg:flex items-center gap-12" />
 
         {/* 3.2 FAR RIGHT: Top Utility Cluster */}
-        <div className="flex justify-end items-center gap-4">
+        <div className="flex justify-end items-center gap-6">
           {/* Version & Admin Unified Cluster */}
-          <div className="flex items-center gap-2">
-            {/* Large Version Badge */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-brand-gold/5 border border-brand-gold/30 rounded-full backdrop-blur-md shadow-[0_0_15px_rgba(197,160,89,0.1)] group hover:border-brand-gold transition-all">
+          <div className="flex items-center gap-4">
+            {/* Version Badge: No border, 20% larger font (12px) */}
+            <div className="flex items-center gap-2 group transition-all">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(197,160,89,1)]" />
-              <span className="text-[10px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v3.3.2</span>
+              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v3.3.4</span>
             </div>
 
-            {/* Admin Toggle */}
+            {/* Admin Toggle: Keep as is */}
             <Link href="/admin" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-neutral-500 hover:text-brand-gold hover:border-brand-gold/50 transition-all group">
                <Database size={18} className="group-hover:rotate-12 transition-transform" />
             </Link>
-          </div>
 
-          {/* Global Credits Cluster */}
-          <div className="flex items-center gap-4 px-6 py-2 bg-black/40 backdrop-blur-xl border border-brand-gold/30 rounded-full shadow-[0_0_20px_rgba(197,160,89,0.1)] group hover:border-brand-gold/60 transition-all">
-             <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-brand-gold/50" />
-                <span className="text-brand-gold font-black text-[10px] uppercase tracking-widest leading-none">Unlimited (Beta)</span>
-             </div>
-             <div className="w-8 h-8 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center overflow-hidden">
-                <User size={16} className="text-neutral-500" />
-             </div>
+            {/* Profile Only: Circular avatar circle maintained */}
+            <div className="w-9 h-9 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center overflow-hidden hover:border-brand-gold/50 transition-all cursor-pointer">
+               <User size={18} className="text-neutral-500" />
+            </div>
           </div>
         </div>
       </div>
