@@ -30,6 +30,8 @@ export const metadata: Metadata = {
   description: "Experience the Void. Architect your vision.",
 };
 
+import { DirectorHeartbeat } from "@/components/ui/director-heartbeat";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -44,6 +46,7 @@ export default function RootLayout({
         <Header />
         {children}
         <Footer />
+        <DirectorHeartbeat />
       </body>
     </html>
   );

@@ -37,6 +37,7 @@ export interface Project {
   world: string;
   duration: number;
   status: string;
+  progress: number;
   episode_count?: number;
   metadata?: {
     logline: string;

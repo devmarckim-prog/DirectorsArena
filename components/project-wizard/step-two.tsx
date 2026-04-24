@@ -36,12 +36,12 @@ export function StepTwo({ formData, setFormData, onNext }: StepTwoProps) {
       <div className="w-full flex justify-between items-end mb-12">
         <div className="text-left">
           <motion.h2 
-            className="text-4xl sm:text-5xl font-black text-white mb-4 tracking-tighter"
+            className="text-4xl sm:text-5xl font-black text-white mb-1 tracking-tighter"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            당신의 서사를 관통하는<br />단 한 문장은 무엇입니까?
+            당신의 이야기를 관통하는<br />단 한 문장은 무엇입니까?
           </motion.h2>
           <p className="text-neutral-500 font-medium tracking-wide uppercase text-sm">
             Craft Your Core Narrative Seed (Logline)
@@ -93,7 +93,7 @@ export function StepTwo({ formData, setFormData, onNext }: StepTwoProps) {
           formData.logline.length >= 1 ? "text-brand-gold/60" : "text-neutral-700"
         )}>
           {formData.logline.length < 1 
-            ? "What is the one sentence that pierces through your narrative?" 
+            ? "당신의 이야기를 관통하는 단 한 문장은 무엇입니까?" 
             : "Vision threshold met. Press Enter to proceed."
           }
         </p>

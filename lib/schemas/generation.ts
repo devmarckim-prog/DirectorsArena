@@ -13,9 +13,14 @@ export const CharacterOutputSchema = z.object({
   name: z.string().describe("Character's full name"),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]).describe("Character gender for avatar mapping"),
   ageGroup: z.enum(["TEEN", "20S", "30S", "40S", "50S_PLUS"]).describe("Age bracket for avatar mapping"),
-  role: z.string().describe("Narrative role, e.g. 주인공, 안타고니스트, 조력자"),
+  role: z.string().describe("Narrative role, e.g. 주인공, 안타고니스트, 조력자, 배신자"),
   description: z.string().describe("2-3 sentence character description including appearance and personality"),
   relationshipToProtagonist: z.string().describe("How this character relates to the protagonist"),
+  groups: z.array(z.string()).describe("1-2 affiliations or thematic groups (e.g., 'Action School', 'Corporate Team', 'Rivals')"),
+  relations: z.array(z.object({
+    target: z.string().describe("Name of the target character"),
+    type: z.string().describe("Type of relationship (e.g., 'Ally', 'Conflict', 'Romance', 'Secret')")
+  })).describe("All-to-all relationships between characters in this project"),
 });
 
 /**
@@ -33,14 +38,29 @@ export const EpisodeOutputSchema = z.object({
 });
 
 /**
+ * Cinematic story beat schema for the Navigator (3-Act structure milestones)
+ */
+export const StoryBeatOutputSchema = z.object({
+  act_number: z.number().min(1).max(3).describe("Act number (1, 2, or 3)"),
+  beat_type: z.string().describe("Standard beat typeName: e.g., Opening Image, Midpoint, All is Lost"),
+  title: z.string().describe("Short, evocative title for this beat"),
+  description: z.string().describe("1-sentence summary of what happens in this beat"),
+  timestamp_label: z.string().describe("Relative page or time estimate, e.g., 'Page 15' or '00:15:00'"),
+});
+
+/**
  * Complete project generation schema — the single-pass AI output
  * Streamed via streamObject for progressive rendering
  */
 export const ProjectGenerationSchema = z.object({
+  englishTitle: z.string().describe("A cinematic, evocative English main title for the project"),
   logline: z.string().describe("One compelling sentence that sells the entire story"),
-  synopsis: z.string().describe("A rich, detailed synopsis of approximately 1000 characters"),
+  synopsis: z.string().describe("A rich, detailed synopsis of approximately 700 characters"),
   characters: z.array(CharacterOutputSchema).describe(
     "4-6 richly detailed characters that bring the narrative to life"
+  ),
+  structure: z.array(StoryBeatOutputSchema).describe(
+    "8-10 key narrative beats following the 3-act structure (Navigator)"
   ),
   episodes: z.array(EpisodeOutputSchema).describe(
     "Episode outlines matching the requested episode count. " +
@@ -65,6 +85,7 @@ export const EpisodeScriptSchema = z.object({
 // TypeScript types for consumption
 export type CharacterOutput = z.infer<typeof CharacterOutputSchema>;
 export type EpisodeOutput = z.infer<typeof EpisodeOutputSchema>;
+export type StoryBeatOutput = z.infer<typeof StoryBeatOutputSchema>;
 export type ProjectGeneration = z.infer<typeof ProjectGenerationSchema>;
 export type EpisodeScript = z.infer<typeof EpisodeScriptSchema>;
 

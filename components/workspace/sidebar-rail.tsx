@@ -11,10 +11,10 @@ interface SidebarRailProps {
 
 export function SidebarRail({ masterMode, setMasterMode, onBackToSlate }: SidebarRailProps) {
   return (
-    <aside className="w-20 h-screen fixed top-0 left-0 bg-[#0a0a0a] border-r border-white/5 flex flex-col items-center py-10 z-50">
+    <aside className="w-20 h-screen fixed top-0 left-0 bg-black border-r border-white/5 flex flex-col items-center py-10 z-50">
       <div className="mb-12">
-        <div className="w-10 h-10 rounded-xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center">
-          <span className="text-brand-gold font-black text-xs italic">D</span>
+        <div className="w-10 h-10 rounded-xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center shadow-[0_0_15px_rgba(197,160,89,0.1)]">
+          <span className="text-brand-gold font-black text-sm italic font-serif">D</span>
         </div>
       </div>
 
@@ -22,7 +22,7 @@ export function SidebarRail({ masterMode, setMasterMode, onBackToSlate }: Sideba
         <button 
           onClick={onBackToSlate}
           className="p-3 text-neutral-600 hover:text-white transition-all transform hover:scale-110"
-          title="Return to Slate"
+          title="Return to Scripts"
         >
           <ArrowLeft size={20} />
         </button>

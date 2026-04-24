@@ -80,7 +80,7 @@ export default function LandingPage() {
 
       {/* Decorative Branding (Bottom Corners) */}
       <div className="absolute bottom-12 left-12 opacity-20 pointer-events-none">
-        <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.5em]">Void Core Synchronized</p>
+        <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.5em]">Project Core Synchronized</p>
       </div>
       <div className="absolute bottom-12 right-12 opacity-20 pointer-events-none text-right">
         <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.5em]">Protocol v3.3.4</p>

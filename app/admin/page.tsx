@@ -19,7 +19,9 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'scripts' | 'prompts'>('dashboard');
   const [projects, setProjects] = useState<any[]>([]);
-  const [stats, setStats] = useState<{ total: number; today: number; completed: number; costUsd: string; episodeCount: number }>({ total: 0, today: 0, completed: 0, costUsd: "0.00", episodeCount: 0 });
+  const [stats, setStats] = useState<{ total: number; today: number; completed: number; costUsd: string; episodeCount: number; dailyCosts: { date: string; cost: number }[] }>({ 
+    total: 0, today: 0, completed: 0, costUsd: "0.00", episodeCount: 0, dailyCosts: [] 
+  });
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,6 +36,7 @@ export default function AdminDashboardPage() {
     logline: '',
     epicNarrative: ''
   });
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -52,12 +55,27 @@ export default function AdminDashboardPage() {
 
   useEffect(() => { loadAllData(); }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("정말 이 프로젝트를 영구 삭제하시겠습니까?")) return;
+  const handleDelete = (id: string) => {
+    console.log("Admin: Requesting deletion for ID:", id);
+    setConfirmDeleteId(id);
+  };
+
+  const executeDelete = async (id: string) => {
+    setConfirmDeleteId(null);
     setDeletingId(id);
-    await deleteProjectAction(id);
-    await loadAllData();
-    setDeletingId(null);
+    try {
+      const res = await deleteProjectAction(id);
+      if (res.success) {
+        console.log("Admin: Deletion successful");
+        await loadAllData();
+      } else {
+        alert("삭제 실패: " + res.error);
+      }
+    } catch (err) {
+      console.error("Deletion error:", err);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleEditClick = (project: any) => {
@@ -144,7 +162,7 @@ export default function AdminDashboardPage() {
     setIsSaving(true);
     const res = await insertSampleProjectsAction();
     if (res.success) { await loadAllData(); alert("Elite Sample Set Injected Successfully"); }
-    else { alert("Injection Failed: " + res.error); }
+    else { alert("Injection Failed"); }
     setIsSaving(false);
   };
 
@@ -152,7 +170,7 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     setIsSaving(true);
     const res = await updateAdminSettingsAction(settings);
-    alert(res.success ? "Settings Saved Successfully." : "Save Failed: " + res.error);
+    alert(res.success ? "Settings Saved Successfully." : "Save Failed");
     setIsSaving(false);
   };
 
@@ -164,7 +182,7 @@ export default function AdminDashboardPage() {
       const freshData = await getAdminSettingsAction();
       setSettings(freshData);
       alert("Prompts Reset to Default.");
-    } else { alert("Reset Failed: " + res.error); }
+    } else { alert("Reset Failed"); }
     setIsSaving(false);
   };
 
@@ -206,7 +224,7 @@ export default function AdminDashboardPage() {
                 <span className="text-[10px] font-black uppercase tracking-widest">Global Admin Access</span>
               </div>
               <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase leading-tight">
-                Nexus<br /><span className="text-brand-gold">Command</span>
+                Admin<br /><span className="text-brand-gold">Dashboard</span>
               </h1>
             </div>
 
@@ -215,7 +233,7 @@ export default function AdminDashboardPage() {
                 <LayoutDashboard size={16} /><span>Dashboard</span>
               </button>
               <button onClick={() => setActiveTab('scripts')} className={tabClass('scripts')}>
-                <Film size={16} /><span>Registry</span>
+                <Film size={16} /><span>Project List</span>
               </button>
               <button onClick={() => setActiveTab('prompts')} className={tabClass('prompts')}>
                 <Settings size={16} /><span>Models & Prompts</span>
@@ -257,7 +275,7 @@ export default function AdminDashboardPage() {
                     { label: 'Total Project Nodes', value: stats.total, icon: <Database size={80} /> },
                     { label: 'Generated Episode Scripts', value: stats.episodeCount, icon: <Film size={80} />, gold: true },
                     { label: 'Completed Status', value: stats.completed, icon: null },
-                    { label: 'Estimated Cost ($0.05/ep)', value: `$${stats.costUsd} USD`, icon: null },
+                    { label: 'Cumulative API Cost', value: `$${stats.costUsd} USD`, icon: null },
                   ].map((card, i) => (
                     <div key={i} className={cn(
                       "rounded-3xl p-8 backdrop-blur-md relative overflow-hidden border",
@@ -276,6 +294,29 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                   ))}
+                </div>
+
+                {/* DAILY COST TREND (v7.2 Telemetry UI) */}
+                <div className="mb-12">
+                   <div className="flex items-center space-x-3 mb-6">
+                      <Settings className="text-brand-gold animate-spin-slow" size={16} />
+                      <h3 className="text-sm font-black text-white uppercase tracking-widest">Daily API Expenditure Trend</h3>
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {stats.dailyCosts && stats.dailyCosts.length > 0 ? stats.dailyCosts.map((d: any, i: number) => (
+                        <div key={i} className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.05] transition-colors">
+                           <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-2">{d.date}</span>
+                           <div className="flex items-baseline space-x-1">
+                              <span className="text-xl font-black text-white">${d.cost.toFixed(3)}</span>
+                              <span className="text-[10px] font-bold text-neutral-600">USD</span>
+                           </div>
+                        </div>
+                      )) : (
+                        <div className="col-span-full py-10 bg-white/[0.01] border border-dashed border-white/5 rounded-3xl text-center">
+                           <span className="text-[10px] font-black text-neutral-700 uppercase tracking-widest">No telemetry data available for the last 7 days.</span>
+                        </div>
+                      )}
+                   </div>
                 </div>
 
                 <div className="bg-red-950/10 border border-red-900/30 rounded-3xl p-10 relative overflow-hidden">
@@ -302,7 +343,7 @@ export default function AdminDashboardPage() {
               <motion.div key="scripts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <div className="mb-10 flex items-center justify-between">
                   <div>
-                    <h2 className="text-2xl font-black text-white uppercase tracking-widest">Master Script Registry</h2>
+                    <h2 className="text-2xl font-black text-white uppercase tracking-widest">Project Registry</h2>
                     <p className="text-neutral-500 text-sm mt-2">All system-generated narrative projects</p>
                   </div>
                   <button onClick={loadAllData} className="px-5 py-2 bg-white/5 hover:bg-white/10 font-bold text-xs uppercase tracking-widest border border-white/10 rounded-full transition-colors">
@@ -323,7 +364,7 @@ export default function AdminDashboardPage() {
                       {loading ? (
                         <tr><td colSpan={3} className="py-20 text-center text-xs font-black text-brand-gold uppercase tracking-[0.2em] animate-pulse">Initializing Nodes...</td></tr>
                       ) : projects.length === 0 ? (
-                        <tr><td colSpan={3} className="py-20 text-center text-sm font-black text-neutral-600 uppercase tracking-widest">The Void is Empty.</td></tr>
+                        <tr><td colSpan={3} className="py-20 text-center text-sm font-black text-neutral-600 uppercase tracking-widest">No Projects Found.</td></tr>
                       ) : projects.map((p) => {
                         let displayTitle = p.title;
                         let displayGenre = p.genre;
@@ -338,7 +379,7 @@ export default function AdminDashboardPage() {
                         }
 
                         return (
-                          <tr key={p.id} className={cn("border-b border-white/5 hover:bg-white/[0.03] transition-colors", deletingId === p.id && "opacity-30 pointer-events-none")}>
+                          <tr key={p.id} className={cn("border-b border-white/5 hover:bg-white/[0.03] transition-colors", deletingId === p.id && "opacity-30")}>
                             <td className="py-6 px-8">
                               <span className="text-[10px] font-black text-neutral-600 bg-white/5 px-2 py-1 rounded-md block mb-1">{p.id.split('-')[0]}</span>
                               <span className="font-black text-lg text-white font-serif italic block">{displayTitle}</span>
@@ -395,7 +436,7 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <form className="space-y-10" onSubmit={handleSaveSettings}>
+                <div className="space-y-10">
                   {/* Model Selection */}
                   <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
                     <h3 className="text-sm font-black text-brand-gold uppercase tracking-widest mb-6">Pipeline Models</h3>
@@ -411,7 +452,7 @@ export default function AdminDashboardPage() {
                             onChange={(e) => handleSettingChange(m.field, e.target.value)}
                             className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-gold"
                           >
-                            <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+                            <option value="claude-sonnet-4-20250514">claude-sonnet-4-20250514 (Stable)</option>
                             <option value="claude-sonnet-3-5">claude-sonnet-3-5</option>
                             <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001</option>
                           </select>
@@ -441,7 +482,7 @@ export default function AdminDashboardPage() {
                       ))}
                     </div>
                   </div>
-                </form>
+                </div>
               </motion.div>
             )}
 
@@ -541,6 +582,50 @@ export default function AdminDashboardPage() {
                     <span>{isSaving ? "Persisting..." : "Synchronize Database"}</span>
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+              onClick={() => setConfirmDeleteId(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md bg-neutral-900 border border-red-900/30 rounded-[32px] p-10 text-center shadow-[0_0_100px_rgba(255,0,0,0.1)]"
+            >
+              <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
+                <Trash2 size={32} className="text-red-500" />
+              </div>
+              <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-4">Excision Protocol</h2>
+              <p className="text-sm text-neutral-400 mb-10 leading-relaxed">
+                정말 이 프로젝트를 영구적으로 말소하시겠습니까?<br />
+                <span className="text-red-500/60 font-mono text-[10px]">Warning: This action is irreversible.</span>
+              </p>
+              <div className="flex flex-col space-y-3">
+                <button 
+                  onClick={() => executeDelete(confirmDeleteId)}
+                  className="w-full py-5 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all shadow-lg active:scale-95"
+                >
+                  Confirm Deletion
+                </button>
+                <button 
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="w-full py-5 text-neutral-500 hover:text-white font-black uppercase tracking-widest text-[10px] transition-colors"
+                >
+                  Abort Operation
+                </button>
               </div>
             </motion.div>
           </div>

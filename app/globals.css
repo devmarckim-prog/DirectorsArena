@@ -1,3 +1,5 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -9,8 +11,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-serif: "Old Standard TT", "Crimson Pro", serif;
-  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui;
+  --font-serif: "Nanum Myeongjo", "Old Standard TT", serif;
+  --font-sans: "Pretendard Variable", Pretendard, "Inter", ui-sans-serif, system-ui;
   --color-brand-gold: #C5A059;
   --color-brand-dark: #0A0A0A;
 }
@@ -27,8 +29,13 @@
   100% { transform: scale(1); }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 body {
-  /* STEP 1.1: Global Background - Radial Gradient with central illumination */
+  /* Global Background - Radial Gradient with central illumination */
   background: radial-gradient(circle at center, #1A1A1A 0%, #000000 100%);
   background-attachment: fixed;
   color: var(--foreground);
@@ -38,7 +45,7 @@ body {
   min-height: 100vh;
 }
 
-/* STEP 1.1: Film Grain Overlay */
+/* Film Grain Overlay */
 body::before {
   content: "";
   position: fixed;
@@ -51,7 +58,7 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
-/* STEP 1.2: Void Core Grid Lines */
+/* Void Core Grid Lines */
 body::after {
   content: "";
   position: fixed;
@@ -97,5 +104,38 @@ body::after {
   }
   .scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar {
     display: none !important;
+  }
+
+  .cinematic-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(197, 160, 89, 0.05), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  .custom-scrollbar-gold::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar-gold::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .custom-scrollbar-gold::-webkit-scrollbar-thumb {
+    background: rgba(197, 160, 89, 0.3);
+    border-radius: 10px;
+  }
+  .custom-scrollbar-gold::-webkit-scrollbar-thumb:hover {
+    background: rgba(197, 160, 89, 0.6);
+  }
+
+  .custom-scrollbar-slim::-webkit-scrollbar {
+    width: 2px;
+  }
+  .custom-scrollbar-slim::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .custom-scrollbar-slim::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .custom-scrollbar-slim::-webkit-scrollbar-thumb:hover {
+    background: #C5A059;
   }
 }

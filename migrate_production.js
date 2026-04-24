@@ -7,7 +7,14 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config({ path: '.env.local' });
+const fs = require('fs');
+const path = require('path');
+const envPath = path.resolve('.env.local');
+const envConfig = fs.readFileSync(envPath, 'utf8');
+envConfig.split('\n').forEach(line => {
+  const [key, ...vals] = line.split('=');
+  if (key && vals) process.env[key.trim()] = vals.join('=').trim();
+});
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -50,6 +57,11 @@ async function migrate() {
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
         project_id UUID REFERENCES projects_v2(id) ON DELETE CASCADE,
         title TEXT NOT NULL,
+        poster_path TEXT,
+        vote_average DECIMAL(3, 1),
+        release_date TEXT,
+        genres TEXT[],
+        tmdb_id INTEGER,
         viewer_stats TEXT,
         similarity_reason TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()

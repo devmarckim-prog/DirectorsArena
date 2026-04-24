@@ -1,5 +1,19 @@
 import { z } from 'zod';
 
+// 0. Story Beat Schema (Structural milestones for Navigator)
+export const StoryBeatSchema = z.object({
+  id: z.string().uuid().optional(),
+  project_id: z.string().uuid(),
+  act_number: z.number().min(1).max(3),
+  beat_type: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  timestamp_label: z.string().optional(),
+  order_index: z.number(),
+  is_completed: z.boolean().default(false),
+  scene_id: z.string().uuid().nullable().optional(),
+});
+
 // 1. Block Instance Schema (individual line/beat in a script)
 export const BlockSchema = z.object({
   id: z.string().uuid().optional(),
@@ -40,4 +54,10 @@ export const ProjectSchema = z.object({
 // Types for TypeScript usage
 export type Block = z.infer<typeof BlockSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
-export type Project = z.infer<typeof ProjectSchema>;
+export type StoryBeat = z.infer<typeof StoryBeatSchema>;
+export type Project = z.infer<typeof ProjectSchema> & {
+  characters?: any[];
+  scenes?: Scene[];
+  episodes?: any[];
+  story_beats?: StoryBeat[];
+};

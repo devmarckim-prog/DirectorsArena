@@ -1,128 +1,126 @@
-import { streamObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
-import { createClient } from '@supabase/supabase-js';
-import { ProjectGenerationSchema } from '@/lib/schemas/generation';
+// OMA Zero-Defect Raw Protocol Engine (v6.3)
+// Compliance: Claude API Guide (VIBE Dedicated)
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
-// Use direct Supabase client (not server action context)
+import { createClient } from '@supabase/supabase-js';
+import { persistProjectGeneration } from '@/lib/repository/generation';
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const API_URL = "https://api.anthropic.com/v1/messages";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
+  console.log(`--- [OMA] GENERATION PULSE START: ${projectId} ---`);
 
   try {
-    // 1. Fetch admin settings for dynamic model & prompt (v3.2 schema)
     const { data: adminSettings } = await supabase
       .from('admin_settings')
-      .select('model_id_primary, prompt_scenario_init, prompt_episode_script')
+      .select('prompt_scenario_init, model_id_primary')
       .limit(1)
       .single();
 
-    // SAFE MODEL ID: Validate known claude models, fall back if garbage value injected
-    const ALLOWED_MODELS = ['claude-sonnet-4-6', 'claude-sonnet-3-5', 'claude-opus-4-5', 'claude-haiku-4-5-20251001'];
-    const rawModelId = adminSettings?.model_id_primary || 'claude-sonnet-4-6';
-    const modelId = ALLOWED_MODELS.includes(rawModelId) ? rawModelId : 'claude-sonnet-4-6';
-
-    const baseSystemPrompt = adminSettings?.prompt_scenario_init || 
-      '당신은 세계적 수준의 시나리오 작가이자 엘리트 쇼러너입니다.';
-
-    // 2. Fetch project seed data
-    const { data: project, error: projectErr } = await supabase
+    const stableModelId = adminSettings?.model_id_primary || 'claude-3-5-sonnet-20241022';
+    
+    const { data: project, error: pErr } = await supabase
       .from('projects_v2')
       .select('*')
       .eq('id', projectId)
       .single();
 
-    if (projectErr || !project) {
+    if (pErr || !project) {
       return new Response(JSON.stringify({ error: 'Project not found' }), { status: 404 });
     }
 
-    // 3. Parse wizard seed data from synopsis field
-    let seedData = {
-      platform: project.platform || 'Movie',
-      genres: [project.genre || 'Drama'],
-      episodes: project.episode_count || 1,
-      duration: project.duration || 120,
-      logline: project.logline || '',
-      world: project.world || 'Contemporary',
-      characters: [],
-    };
+    await supabase.from('projects_v2').update({ status: 'BAKING', progress: 10 }).eq('id', projectId);
 
-    try {
-      const parsed = JSON.parse(project.synopsis || '{}');
-      if (parsed.seed && parsed.formData) {
-        seedData = { ...seedData, ...parsed.formData };
-      }
-    } catch { /* synopsis is not seed JSON, use defaults */ }
+    const systemPrompt = `당신은 ${project.platform || 'Movie'} 작가이자 쇼러너입니다. 
+반드시 JSON 형식으로만 응답하세요. ProjectGenerationSchema를 엄격히 준수하십시오.
+${adminSettings?.prompt_scenario_init || ''}`;
 
-    // 4. Build XML-structured system prompt (v2.1 Architecture)
-    const systemPrompt = `<system_instructions>
-${baseSystemPrompt}
+    const userPrompt = `로그라인: "${project.logline || ''}" 기반으로 프로젝트를 시네마틱하게 생성하십시오.`;
 
-당신은 ${seedData.platform} 플랫폼에 맞는 시나리오를 작성합니다.
-장르: ${seedData.genres.join(', ')}
-총 에피소드 수: ${seedData.episodes}화
-세계관: ${seedData.world}
-런타임: ${seedData.duration}분
-
-중요 규칙:
-1. 정확히 ${seedData.episodes}개의 에피소드 아웃라인을 생성하십시오.
-2. 에피소드 1의 scriptContent만 업계 표준 시나리오 포맷(INT./EXT., 캐릭터 이름 대문자, 대사)으로 작성하십시오.
-3. 에피소드 2 이상의 scriptContent는 반드시 null로 설정하십시오.
-4. 각 에피소드의 summary는 300자 내외로 작성하십시오.
-5. 캐릭터는 4-6명 생성하고, gender와 ageGroup을 반드시 지정하십시오.
-</system_instructions>`;
-
-    // 5. Build user prompt with any wizard character seeds
-    const characterSeeds = seedData.characters?.length > 0
-      ? `\n\n사용자가 사전 정의한 캐릭터 시드:\n${JSON.stringify(seedData.characters, null, 2)}`
-      : '';
-
-    const userPrompt = `다음 로그라인을 기반으로 완전한 프로젝트를 생성하십시오:
-
-로그라인: "${seedData.logline || '아직 정의되지 않음 — 장르와 세계관에 맞는 오리지널 로그라인을 창작하십시오.'}"
-${characterSeeds}
-
-정확히 ${seedData.episodes}개의 에피소드 아웃라인을 생성하되, 에피소드 1의 대본만 완전히 작성하십시오.`;
-
-    // 6. Update progress before starting
-    await supabase
-      .from('projects_v2')
-      .update({ progress: 10 })
-      .eq('id', projectId);
-
-    // 7. Stream the response using Vercel AI SDK (with 90s timeout guard)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90000);
-
-    try {
-      const result = streamObject({
-        model: anthropic(modelId),
-        schema: ProjectGenerationSchema,
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: stableModelId,
+        max_tokens: 4000,
+        stream: true,
         system: systemPrompt,
-        prompt: userPrompt,
-        abortSignal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return result.toTextStreamResponse();
-    } catch (streamErr: any) {
-      clearTimeout(timeoutId);
-      if (streamErr?.name === 'AbortError') {
-        return new Response(JSON.stringify({ error: 'Generation timed out after 90 seconds. Please try again.' }), { status: 504 });
-      }
-      throw streamErr;
+        messages: [{ role: "user", content: userPrompt }]
+      })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API Error: ${errText}`);
     }
 
-  } catch (err: any) {
-    console.error('[API] Generate Error:', err);
-    return new Response(
-      JSON.stringify({ error: err.message || 'Generation failed' }), 
-      { status: 500 }
-    );
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) return;
+
+        let totalText = "";
+        const decoder = new TextDecoder();
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.slice(6);
+                if (data === "[DONE]") continue;
+
+                try {
+                  const json = JSON.parse(data);
+                  if (json.type === "content_block_delta" && json.delta?.text) {
+                    const text = json.delta.text;
+                    totalText += text;
+                    controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(text)}\n`));
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+
+          if (totalText) {
+            const cleanText = totalText.replace(/```json|```/g, "").trim();
+            try {
+              const parsed = JSON.parse(cleanText);
+              await persistProjectGeneration(projectId, parsed);
+            } catch (pErr) {}
+          }
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    });
+
+  } catch (err) {
+    console.error("[OMA] GHOST GENERATION FAILURE:", err);
+    await supabase.from('projects_v2').update({ status: 'ERROR', progress: 0 }).eq('id', projectId);
+    return new Response(JSON.stringify({ error: (err as any).message }), { status: 500 });
   }
 }

@@ -87,7 +87,7 @@ export function SoulsNexus({ characters = [] }: SoulsNexusProps) {
       <div className="w-[300px] flex flex-col space-y-4 overflow-y-auto pr-4 scrollbar-hide">
         <div className="flex items-center space-x-3 mb-6">
            <Users className="text-brand-gold" size={16} />
-           <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.4em]">The Soul Roster</h3>
+           <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.4em]">The Character Roster</h3>
         </div>
         
         {characters.map((char) => (
@@ -115,14 +115,14 @@ export function SoulsNexus({ characters = [] }: SoulsNexusProps) {
                 {char.name}
               </h4>
               <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">
-                {char.job || "The Soul"}
+                {char.job || "The Character"}
               </p>
             </div>
           </button>
         ))}
       </div>
 
-      {/* [RIGHT] The Nexus Map (70%) */}
+      {/* [RIGHT] The Character Network (70%) */}
       <div className="flex-1 bg-black/40 border border-white/5 rounded-[3rem] relative overflow-hidden flex flex-col">
         {/* Starfield Particles (Atmosphere Calibration) */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

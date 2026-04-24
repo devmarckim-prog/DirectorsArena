@@ -24,49 +24,77 @@ export function HeroHeader({
   setProductionTab
 }: HeroHeaderProps) {
   // v3.16 Dynamic Title Splitting
-  const titleParts = project.title.split(/[()]/);
+  const safeTitle = project.title || "Untitled Project";
+  const titleParts = safeTitle.split(/[()]/);
   const mainTitle = titleParts[0].trim();
-  const subTitle = titleParts[1] ? titleParts[1].trim() : (project.subtitle?.replace(/[()]/g, '') || project.title.toUpperCase());
+  const subTitle = titleParts[1] ? titleParts[1].trim() : (project.subtitle?.replace(/[()]/g, '') || safeTitle.toUpperCase());
+
+  // v6.20 Dynamic Theme Logic (Cyberpunk/Noir Optimization)
+  const isCyberpunk = project.world?.toLowerCase().includes('cyberpunk') || project.genre?.toLowerCase().includes('cyberpunk');
+  const themeShadow = isCyberpunk 
+    ? '0 0 20px rgba(0, 255, 255, 0.4), 0 0 40px rgba(255, 0, 255, 0.2)'
+    : '0 0 40px rgba(197, 160, 89, 0.4), 0 0 80px rgba(197, 160, 89, 0.1)';
+  const glowColor = isCyberpunk ? 'bg-cyan-500/[0.08]' : 'bg-brand-gold/[0.05]';
 
   return (
-    <header className="sticky top-24 z-40 bg-[#050505] pt-12 pb-4 flex flex-col items-center w-full backdrop-blur-3xl">
-      {/* 2.0 PROTOCOL BADGES (Dynamic Binding v3.0) */}
-      <div className="flex items-center gap-3 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
-        <div className="px-4 py-1.5 border border-[#EAB308]/40 bg-[#EAB308]/5 rounded-full backdrop-blur-md">
-          <span className="text-[10px] font-black text-[#EAB308] uppercase tracking-[0.2em]">{project.version || "BUILD V3.3.2"}</span>
+    <header className="sticky top-24 z-40 bg-[#050505] pt-4 pb-2 flex flex-col items-center w-full backdrop-blur-3xl">
+      {/* 2.0 PROTOCOL BADGES (Dynamic Binding v4.5) */}
+      <div className="flex justify-center items-center gap-2 mb-1 animate-in fade-in slide-in-from-top-4 duration-1000 scale-90 md:scale-100 origin-center w-full">
+        <div className="px-2 py-[2px] border border-brand-gold/40 bg-brand-gold/5 rounded-full backdrop-blur-md flex items-center justify-center">
+          <span className="text-[7.5px] font-black text-brand-gold uppercase tracking-[0.2em] leading-none mt-[1px]">{project.platform}</span>
         </div>
-        <div className="px-4 py-1.5 border border-[#71717A]/40 bg-[#18181B]/80 rounded-full backdrop-blur-md">
-          <span className="text-[10px] font-black text-[#71717A] uppercase tracking-[0.2em]">{project.buildId ? `Series Protocol ${project.buildId}` : "Series Protocol v1.02"}</span>
+        <div className="px-2 py-[2px] border border-white/10 bg-white/5 rounded-full backdrop-blur-md flex items-center justify-center">
+          <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em] leading-none mt-[1px]">{project.genre}</span>
+        </div>
+        <div className="px-2 py-[2px] border border-white/10 bg-white/5 rounded-full backdrop-blur-md flex items-center justify-center">
+          <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em] leading-none mt-[1px]">{project.episodes?.length || project.episode_count} EPS</span>
+        </div>
+        <div className="px-2 py-[2px] border border-white/10 bg-white/5 rounded-full backdrop-blur-md flex items-center justify-center">
+          <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em] leading-none mt-[1px]">{project.duration} MIN</span>
         </div>
       </div>
 
-      {/* 2.1 TITANIC MAIN TITLE (Universal Mapping v3.16) */}
-      <div className="relative mb-4 text-center flex flex-col items-center">
-        {/* KR MAIN: text-[110px] font-black w/ Intensive Glow */}
-        <h1 
-          className="text-[110px] font-black uppercase tracking-tighter text-white leading-none relative z-10"
+      {/* 2.1 TITANIC MAIN TITLE (Universal Mapping v4.5) */}
+      <div className="relative mb-1 text-center flex flex-col items-center justify-center w-full">
+        {/* KR MAIN: Cinematic Serif w/ Intensive Glow */}
+        <motion.h1 
+          animate={{
+            opacity: [0.75, 1, 0.75],
+          }}
+          transition={{
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className={cn(
+            "text-3xl md:text-[68px] font-black italic font-serif uppercase tracking-tighter text-white leading-none relative z-10",
+            "text-center px-6 md:px-0"
+          )}
           style={{ 
-            textShadow: '0 0 40px rgba(255,255,255,0.6), 0 0 80px rgba(255,255,255,0.2)' 
+            textShadow: themeShadow
           }}
         >
           {mainTitle}
-        </h1>
+        </motion.h1>
 
-        {/* EN SUB: Restored Gold + Tracking */}
-        <span className="text-[20px] font-black text-[#EAB308] uppercase tracking-[1.5em] mt-8 ml-[1.5em]">
-          {subTitle}
+        {/* EN SUB: Data Bound to Subtitle 필드 */}
+        <span className="text-[12px] md:text-[13px] font-black text-brand-gold uppercase tracking-[1em] md:tracking-[1.25em] mt-2 ml-[1em] md:ml-[1.25em] opacity-80">
+          {project.subtitle || subTitle}
         </span>
 
         {/* Cinematic Ambient Glow */}
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/[0.07] blur-[150px] h-48 w-[120%] rounded-full pointer-events-none -z-10" />
+        <div className={cn(
+          "absolute inset-x-0 top-1/2 -translate-y-1/2 blur-[150px] h-48 w-[120%] rounded-full pointer-events-none -z-10",
+          glowColor
+        )} />
       </div>
 
       {/* 3. NAVIGATION (mt-16 Integration) */}
       <nav className="flex justify-center gap-14 border-b border-white/5 w-full pb-2 mt-[16px] overflow-x-auto no-scrollbar relative z-20">
         {(masterMode === 'SCENARIO' ? [
-          { id: 'BIBLE', label: 'Story Bible' },
-          { id: 'SIMILAR', label: 'Comps' },
-          { id: 'NAVIGATOR', label: 'Navigator' }
+          { id: 'BIBLE', label: 'Bible' },
+          { id: 'SIMILAR', label: 'Similar Works' },
+          { id: 'NAVIGATOR', label: 'Beat Sheet' }
         ] : [
           { id: 'CASTING', label: 'Casting' },
           { id: 'BUDGET', label: 'Budget' },
@@ -82,7 +110,7 @@ export function HeroHeader({
                 else setProductionTab(tab.id as any);
               }}
               className={cn(
-                "relative text-sm font-black uppercase tracking-[0.35em] pb-3 transition-all duration-300",
+                "relative text-[16px] font-black uppercase tracking-[0.35em] pb-3 transition-all duration-300",
                 isActive ? "text-white" : "text-[#71717A] hover:text-white"
               )}
             >
@@ -90,7 +118,7 @@ export function HeroHeader({
               {isActive && (
                 <motion.div 
                   layoutId="activeTab"
-                  className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-[#EAB308] shadow-[0_0_10px_rgba(234,179,8,0.4)]" 
+                  className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-brand-gold shadow-[0_0_10px_rgba(197,160,89,0.5)]" 
                 />
               )}
             </button>
