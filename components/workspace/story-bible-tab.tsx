@@ -71,18 +71,19 @@ export function StoryBibleTab({
     const idx = characters.findIndex((c) => c.id === id);
     if (idx !== -1) {
       setActiveIndex(idx);
-      // Double check scroll sync
+      // Enhanced scroll sync with longer delay for reliable rendering
       setTimeout(() => {
         if (carouselRef.current) {
-          const activeCard = carouselRef.current.children[idx] as HTMLElement;
-          if (activeCard) {
+          const cards = carouselRef.current.querySelectorAll('[data-character-card]');
+          const targetCard = cards[idx] as HTMLElement;
+          if (targetCard) {
             carouselRef.current.scrollTo({
-              left: activeCard.offsetLeft - 20,
+              left: targetCard.offsetLeft - 40, // Increased offset for better visibility
               behavior: 'smooth'
             });
           }
         }
-      }, 50);
+      }, 100);
     }
   };
 

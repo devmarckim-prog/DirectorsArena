@@ -43,28 +43,9 @@ export function NexusNode({ character, layout, isSelected, onClick }: NexusNodeP
         padding: 0,
         cursor: 'pointer',
       }}
-      animate={{ scale: isSelected ? 1.2 : 1, y: [0, -8, 0] }}
-      transition={{
-        scale: { duration: 0.3, ease: 'easeOut' },
-        y: { duration: floatDuration, delay: floatDelay, repeat: Infinity, ease: 'easeInOut' },
-      }}
+      animate={{ scale: isSelected ? 1.2 : 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
     >
-      {/* Pulse ring */}
-      <motion.div
-        style={{
-          position: 'absolute',
-          width: layout.size + 18,
-          height: layout.size + 18,
-          borderRadius: '50%',
-          border: `1px solid ${layout.color}`,
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-        }}
-        animate={{ scale: [1, 1.38, 1], opacity: [0.3, 0.04, 0.3] }}
-        transition={{ duration: floatDuration + 0.6, repeat: Infinity, ease: 'easeInOut' }}
-      />
 
       {/* Avatar circle */}
       <div
