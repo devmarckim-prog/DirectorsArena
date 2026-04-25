@@ -47,7 +47,9 @@ export function StoryBibleTab({
   }, [metadata?.characters, project.characters]);
 
   const majorCharacters = useMemo(() => {
-    return characters.filter(c => (c.importance || 0) >= 7).slice(0, 8);
+    const highImportance = characters.filter(c => (c.importance || 0) >= 7);
+    // Fallback: If no high importance characters, take first 5 characters
+    return (highImportance.length > 0 ? highImportance : characters.slice(0, 6)).slice(0, 8);
   }, [characters]);
 
   useEffect(() => {
