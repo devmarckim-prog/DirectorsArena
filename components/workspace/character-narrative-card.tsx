@@ -66,6 +66,7 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
 
   return (
     <div
+      data-character-card
       onClick={() => { if (!isActive) onSelect(); }}
       className={cn(
         "group relative w-[85vw] md:min-w-[420px] snap-center bg-[#09090B] border rounded-[28px] p-6 transition-all duration-700 cursor-pointer overflow-hidden",
