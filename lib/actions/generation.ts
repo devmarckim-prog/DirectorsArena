@@ -83,11 +83,17 @@ export async function generateEpisodeScriptAction(
   }
 }
 
-export async function triggerRegenerateAction(projectId: string) {
+export async function triggerRegenerateAction(projectId: string, prompt: string = "") {
   try {
     const supabase = createAdminClient();
     
-    await supabase.from('projects_v2').update({ status: 'BAKING', progress: 0 }).eq('id', projectId);
+    // v8.6: Persist steer prompt for the ignite engine
+    await supabase.from('projects_v2').update({ 
+      status: 'BAKING', 
+      progress: 0,
+      steer_prompt: prompt 
+    }).eq('id', projectId);
+
     await Promise.all([
       supabase.from('characters_v2').delete().eq('project_id', projectId),
       supabase.from('episodes_v2').delete().eq('project_id', projectId),

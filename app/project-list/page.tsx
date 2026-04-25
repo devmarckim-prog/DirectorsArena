@@ -74,7 +74,7 @@ export default function ProjectListPage() {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col pt-20 overflow-hidden relative bg-black">
+    <div className="flex-1 flex flex-col pt-20 overflow-hidden relative bg-[#0a0a0a] bg-[radial-gradient(circle_at_50%_0%,_#1a1a1a_0%,_#0a0a0a_70%)]">
       <motion.div
         key="content"
         initial={{ 
@@ -133,18 +133,6 @@ export default function ProjectListPage() {
         </main>
       </motion.div>
 
-      {/* Subtle Loading Aura (Localized) */}
-      {isLoading && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed bottom-12 right-12 z-50 flex items-center space-x-4 bg-black/40 backdrop-blur-md px-6 py-3 rounded-full border border-white/5"
-        >
-          <WriterLoader className="scale-50" />
-          <span className="text-[8px] font-black text-brand-gold uppercase tracking-[0.3em]">Syncing Void...</span>
-        </motion.div>
-      )}
     </div>
   );
 }

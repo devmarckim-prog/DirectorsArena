@@ -110,15 +110,15 @@ export function HeroHeader({
                 else setProductionTab(tab.id as any);
               }}
               className={cn(
-                "relative text-[16px] font-black uppercase tracking-[0.35em] pb-3 transition-all duration-300",
-                isActive ? "text-white" : "text-[#71717A] hover:text-white"
+                "relative text-[13px] font-medium uppercase tracking-[0.15em] pb-3 transition-all duration-300 font-mono",
+                isActive ? "text-brand-gold" : "text-text-tertiary hover:text-white"
               )}
             >
               {tab.label}
               {isActive && (
                 <motion.div 
                   layoutId="activeTab"
-                  className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-brand-gold shadow-[0_0_10px_rgba(197,160,89,0.5)]" 
+                  className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-brand-gold shadow-[0_0_15px_rgba(197,160,89,0.4)]" 
                 />
               )}
             </button>

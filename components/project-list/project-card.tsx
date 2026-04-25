@@ -112,7 +112,7 @@ export function ProjectCard({
     <>
       <div 
         className={cn(
-          "relative w-full h-[325px] perspective-2000 group",
+          "relative w-full h-[380px] perspective-2000 group",
           isLocked ? "cursor-not-allowed" : "cursor-pointer"
         )}
         onClick={handleCardClick}
@@ -138,14 +138,14 @@ export function ProjectCard({
              )}
              style={{ backfaceVisibility: "hidden" }}
           >
-             <div className="absolute top-0 left-0 right-0 h-[185px] z-0 overflow-hidden bg-neutral-900 border-none">
+             <div className="absolute top-0 left-0 right-0 h-[220px] z-0 overflow-hidden bg-neutral-900 border-none">
                 {!imgError ? (
                   <Image 
                     src={displayImage}
                     alt=""
                     fill
                     unoptimized
-                    className="object-cover transition-transform duration-1000 group-hover:scale-110 opacity-60 group-hover:opacity-100 placeholder:bg-neutral-800"
+                    className="object-cover transition-transform duration-1000 group-hover:scale-110 opacity-70 group-hover:opacity-100 placeholder:bg-neutral-800"
                     onError={() => setImgError(true)}
                   />
                 ) : (
@@ -153,7 +153,8 @@ export function ProjectCard({
                     <Droplet size={20} className="text-white/10" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-[#0d0d0d]/40 to-transparent" />
+                {/* Enhanced Gradient from Image 3 */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-[#0d0d0d]/80 to-transparent" />
              </div>
     
              <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-20">
@@ -230,24 +231,31 @@ export function ProjectCard({
              )}
     
              {!isBaking && (
-                <div className="absolute top-[185px] left-0 right-0 bottom-0 p-5 pt-3.5 flex flex-col justify-between z-10">
-                   <div className="space-y-2">
-                     <div className="flex items-center justify-between">
-                        <h3 className="text-[17px] font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-brand-gold transition-colors">
-                          {displayTitle}
-                        </h3>
-                        <ArrowUpRight size={14} className="text-white/20 group-hover:text-brand-gold transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
+                <div className="absolute top-[210px] left-0 right-0 bottom-0 p-5 pt-3.5 flex flex-col justify-between z-10">
+                   <div className="space-y-2.5">
+                     <div className="flex items-start justify-between">
+                        <div className="flex flex-col space-y-0.5">
+                          <h3 className="text-[18px] font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-brand-gold transition-colors">
+                            {displayTitle}
+                          </h3>
+                          {(meta?.title_en || meta?.story?.title_en) && (
+                            <p className="text-[10px] font-medium text-white/30 uppercase tracking-widest line-clamp-1">
+                              {meta?.title_en || meta?.story?.title_en}
+                            </p>
+                          )}
+                        </div>
+                        <ArrowUpRight size={14} className="mt-1 text-white/20 group-hover:text-brand-gold transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
                      </div>
                      <div className="flex items-center space-x-2 text-[9px] text-neutral-500 font-medium">
-                       <div className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/5">
-                         <User size={8} className="text-neutral-600" />
-                       </div>
-                       <span className="line-clamp-1 opacity-70 italic font-serif">Anonymous Director</span>
-                       <span className="text-neutral-800 font-thin">•</span>
-                       <span className="opacity-40 tracking-tighter">2026.04.18</span>
+                       <span className="opacity-40 tracking-tighter">
+                         {new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                       </span>
                      </div>
                    </div>
-                   <div className="w-full">
+                   <div className="w-full space-y-4">
+                     {/* Bottom Bar from Image 2 */}
+                     <div className="h-[1px] w-full bg-white/5" />
+                     
                      <div className="flex items-center justify-between px-0.5">
                        <div className="flex items-center space-x-5">
                          <button className="text-neutral-700 hover:text-white transition-colors">

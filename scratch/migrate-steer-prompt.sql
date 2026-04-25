@@ -1,0 +1,2 @@
+
+ALTER TABLE projects_v2 ADD COLUMN IF NOT EXISTS steer_prompt TEXT;

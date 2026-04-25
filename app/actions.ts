@@ -37,8 +37,8 @@ export async function persistGenerationAction(projectId: string, generation: any
 export async function generateEpisodeScriptAction(projectId: string, episodeId: string, episodeNumber: number) {
   return generationActions.generateEpisodeScriptAction(projectId, episodeId, episodeNumber);
 }
-export async function triggerRegenerateAction(projectId: string) {
-  return generationActions.triggerRegenerateAction(projectId);
+export async function triggerRegenerateAction(projectId: string, prompt: string = "") {
+  return generationActions.triggerRegenerateAction(projectId, prompt);
 }
 export async function updateEpisodeScriptContentAction(episodeId: string, projectId: string, newContent: string) {
   return generationActions.updateEpisodeScriptContentAction(episodeId, projectId, newContent);

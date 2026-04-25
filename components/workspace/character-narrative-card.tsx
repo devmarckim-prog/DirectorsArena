@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Edit3, Shield, Check, X, User, Activity, Rocket, ShieldAlert } from "lucide-react";
-import { ParameterChip } from "@/components/project/character-parameter-chips";
+import { Shield, Check, X, Edit3 } from "lucide-react";
 
-interface CharacterNarrativeCardProps {
+interface Props {
   character: any;
   isActive: boolean;
   onUpdate: (updates: any) => Promise<any>;
@@ -14,227 +12,207 @@ interface CharacterNarrativeCardProps {
   onSelect: () => void;
 }
 
-export function CharacterNarrativeCard({ 
-  character, 
-  isActive, 
-  onUpdate,
-  onEditFullMode,
-  onSelect
-}: CharacterNarrativeCardProps) {
+export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFullMode, onSelect }: Props) {
+  // ── Optimistic local state ──
+  const [local, setLocal] = useState<any>(character);
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [tempValue, setTempValue] = useState<any>(null);
-  const [originalValue, setOriginalValue] = useState<any>(null);
+  const [tempValue, setTempValue] = useState<any>("");
 
-  const startEditing = (field: string, value: any) => {
-    setEditingField(field);
-    setTempValue(value);
-    setOriginalValue(value);
-  };
-
-  const saveEdit = async () => {
-    if (editingField) {
-      await onUpdate({ ...character, [editingField]: tempValue });
-    }
+  // Sync when a different character is passed (e.g., navigating carousel)
+  useEffect(() => {
+    setLocal(character);
     setEditingField(null);
+  }, [character?.id]);
+
+  const startEdit = (e: React.MouseEvent, field: string, value: any) => {
+    e.stopPropagation();
+    if (!isActive) return;
+    setEditingField(field);
+    setTempValue(value ?? "");
   };
 
-  const renderInlineEditor = (field: string, type: "text" | "number" | "select" | "slider", options?: string[]) => {
-    if (editingField !== field) return null;
-
-    return (
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="absolute inset-0 z-50 bg-[#09090B]/98 backdrop-blur-xl flex flex-col items-center justify-center p-8 rounded-[32px] border border-brand-gold/30 shadow-[0_0_50px_rgba(197,160,89,0.1)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-full max-w-xs space-y-6 text-center">
-          <label className="text-[10px] font-black text-brand-gold uppercase tracking-[0.4em] mb-2 block">
-            Reset {field.toUpperCase()} Protocol
-          </label>
-          
-          {type === "text" && (
-            <div className="space-y-5">
-              <div className="text-center">
-                <span className="text-[9px] text-neutral-500 uppercase tracking-widest block mb-1">Current Value</span>
-                <span className="text-sm font-medium text-neutral-400 italic">"{originalValue || 'N/A'}"</span>
-              </div>
-              <input 
-                autoFocus
-                value={tempValue || ""}
-                onChange={(e) => setTempValue(e.target.value)}
-                className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white outline-none focus:border-brand-gold/50"
-                onKeyDown={(e) => e.key === "Enter" && saveEdit()}
-              />
-            </div>
-          )}
-
-          {type === "slider" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between px-2">
-                <div className="flex flex-col items-center">
-                  <span className="text-[9px] text-neutral-500 uppercase tracking-widest mb-1">Current</span>
-                  <span className="text-xl font-bold text-neutral-400">{originalValue || 0}</span>
-                </div>
-                <div className="w-8 h-[1px] bg-brand-gold/20" />
-                <div className="flex flex-col items-center">
-                  <span className="text-[9px] text-brand-gold uppercase tracking-widest mb-1">Target</span>
-                  <span className="text-3xl font-black text-white italic">{tempValue || 0}</span>
-                </div>
-              </div>
-              <input 
-                type="range"
-                min="0"
-                max="100"
-                value={tempValue || 0}
-                onChange={(e) => setTempValue(parseInt(e.target.value))}
-                className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-brand-gold"
-              />
-            </div>
-          )}
-
-          {type === "select" && options && (
-            <div className="space-y-5">
-              <div className="text-center">
-                <span className="text-[9px] text-neutral-500 uppercase tracking-widest block mb-1">Current Selection</span>
-                <span className="text-sm font-medium text-neutral-400 italic">{originalValue || 'None'}</span>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-              {options.map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => setTempValue(opt)}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all",
-                    tempValue === opt ? "bg-brand-gold border-brand-gold text-black" : "border-white/10 text-neutral-500 hover:text-white"
-                  )}
-                >
-                  {opt}
-                </button>
-              ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-center space-x-4 pt-4">
-            <button onClick={() => setEditingField(null)} className="p-3 bg-neutral-900 rounded-full text-neutral-500 hover:text-red-500 transition-colors">
-              <X size={16} />
-            </button>
-            <button onClick={saveEdit} className="p-3 bg-brand-gold rounded-full text-black hover:scale-110 transition-transform shadow-lg shadow-brand-gold/20">
-              <Check size={16} strokeWidth={3} />
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    );
+  const cancel = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingField(null);
+    setTempValue("");
   };
+
+  const save = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!editingField) return;
+    const updated = { ...local, [editingField]: tempValue };
+    // 1. Optimistic UI update
+    setLocal(updated);
+    setEditingField(null);
+    setTempValue("");
+    // 2. Async persist
+    await onUpdate(updated);
+  };
+
+  // ── Tiny save/cancel buttons ──
+  const SaveCancel = () => (
+    <div className="flex gap-1.5 mt-1.5" onClick={(e) => e.stopPropagation()}>
+      <button onClick={cancel} className="p-0.5 rounded-full bg-neutral-800 text-neutral-500 hover:text-red-400 transition-colors">
+        <X size={9} />
+      </button>
+      <button onClick={save} className="p-0.5 rounded-full bg-brand-gold text-black hover:scale-110 transition-transform">
+        <Check size={9} strokeWidth={3} />
+      </button>
+    </div>
+  );
+
+  const displayDesc = local.trait || local.description || local.look;
+  const displayDesire = local.desire || local.void;
 
   return (
-    <div 
-      onClick={() => {
-        if (!isActive) onSelect();
-      }}
+    <div
+      onClick={() => { if (!isActive) onSelect(); }}
       className={cn(
-        "group relative w-[85vw] md:min-w-[480px] snap-center bg-[#09090B] border rounded-[32px] p-8 md:p-10 transition-all duration-700 cursor-pointer overflow-hidden",
-        isActive ? "border-brand-gold/60 bg-white/[0.04] scale-[1.02] ring-1 ring-brand-gold/20 shadow-[0_0_50px_rgba(197,160,89,0.05)]" : "border-white/5 opacity-40 hover:opacity-100"
+        "group relative w-[85vw] md:min-w-[420px] snap-center bg-[#09090B] border rounded-[28px] p-6 transition-all duration-700 cursor-pointer overflow-hidden",
+        isActive
+          ? "border-brand-gold/60 bg-white/[0.04] scale-[1.02] ring-1 ring-brand-gold/20 shadow-[0_0_40px_rgba(197,160,89,0.05)]"
+          : "border-white/5 opacity-40 hover:opacity-100"
       )}
     >
-      <div className="relative z-10">
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h4 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startEditing("name", character.name);
-                }}
-                className={cn(
-                  "text-4xl font-black uppercase italic tracking-tighter leading-none cursor-pointer hover:text-brand-gold transition-colors", 
-                  isActive ? "text-brand-gold" : "text-white"
-                )}
-              >
-                {character.name}
-              </h4>
-              {isActive && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditFullMode();
-                  }}
-                  className="p-2 bg-brand-gold/10 hover:bg-brand-gold/20 rounded-full transition-colors group/edit"
+      <div className="relative z-10 space-y-4">
+
+        {/* ── ROW 1: Name + Age + Shield ── */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            {/* Name */}
+            {editingField === "name" ? (
+              <div onClick={(e) => e.stopPropagation()}>
+                <input
+                  autoFocus
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+                  className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-0.5 text-brand-gold font-bold text-xl uppercase tracking-tighter outline-none focus:border-brand-gold font-sans"
+                />
+                <SaveCancel />
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-2 flex-wrap mb-1">
+                <h4
+                  onClick={(e) => startEdit(e, "name", local.name)}
+                  className={cn(
+                    "text-[20px] font-bold uppercase tracking-tight leading-none transition-colors font-sans",
+                    isActive ? "text-brand-gold cursor-pointer hover:opacity-80" : "text-text-primary"
+                  )}
                 >
-                  <Edit3 size={14} className="text-brand-gold group-hover/edit:scale-110 transition-transform" />
-                </button>
-              )}
-            </div>
-            <span 
-              onClick={(e) => {
-                e.stopPropagation();
-                startEditing("job", character.job || character.role);
-              }}
-              className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] cursor-pointer hover:text-white/60 transition-colors block"
-            >
-              {character.job || character.role || "Architect"}
-            </span>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <Shield size={24} className={isActive ? "text-brand-gold" : "text-white/10"} />
-            {isActive && character.gender && (
-              <span 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startEditing("gender", character.gender);
-                }}
-                className="text-[8px] font-black text-brand-gold/60 uppercase tracking-widest cursor-pointer hover:text-brand-gold transition-colors"
+                  {local.name}
+                </h4>
+
+                {/* Age — inline slider when editing */}
+                {editingField === "age" ? (
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="range" min="0" max="100"
+                      value={tempValue}
+                      onChange={(e) => setTempValue(parseInt(e.target.value))}
+                      className="w-20 h-1 accent-brand-gold cursor-pointer"
+                    />
+                    <span className="text-brand-gold text-xs font-bold w-8">{tempValue}세</span>
+                    <button onClick={cancel} className="p-0.5 rounded-full bg-neutral-800 text-neutral-500 hover:text-red-400"><X size={9} /></button>
+                    <button onClick={save} className="p-0.5 rounded-full bg-brand-gold text-black"><Check size={9} strokeWidth={3} /></button>
+                  </div>
+                ) : (
+                  <span
+                    onClick={(e) => startEdit(e, "age", local.age ?? 0)}
+                    className={cn("text-[11px] font-medium text-text-tertiary leading-none transition-colors font-mono", isActive && "cursor-pointer hover:text-brand-gold")}
+                  >
+                    {local.age > 0 ? `${local.age}세` : "나이 미상"}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Job */}
+            {editingField === "job" ? (
+              <div onClick={(e) => e.stopPropagation()}>
+                <input
+                  autoFocus
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+                  className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[10px] font-medium uppercase tracking-widest outline-none focus:border-brand-gold font-mono"
+                />
+                <SaveCancel />
+              </div>
+            ) : (
+              <span
+                onClick={(e) => startEdit(e, "job", local.job || local.role)}
+                className={cn("text-[11px] font-medium text-text-tertiary uppercase tracking-[0.1em] block transition-colors font-mono", isActive && "cursor-pointer hover:text-text-secondary")}
               >
-                {character.gender}
+                {local.job || local.role || "역할 미정"}
               </span>
+            )}
+          </div>
+
+          {/* Shield + edit button */}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <Shield size={18} className={isActive ? "text-brand-gold" : "text-white/10"} />
+            {isActive && (
+              <button onClick={(e) => { e.stopPropagation(); onEditFullMode(); }} className="p-1.5 bg-brand-gold/10 hover:bg-brand-gold/20 rounded-full transition-colors">
+                <Edit3 size={11} className="text-brand-gold" />
+              </button>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-3 mb-8">
-          <div onClick={(e) => { e.stopPropagation(); startEditing("relationship_type", character.relationship_type || "Ally"); }}>
-            <ParameterChip label="Type" value={character.relationship_type || "Ally"} />
-          </div>
-          <div onClick={(e) => { e.stopPropagation(); startEditing("age", character.age); }}>
-            <ParameterChip label="Age" value={character.age > 0 ? character.age.toString() : "Unknown"} />
-          </div>
-          <div onClick={(e) => { e.stopPropagation(); startEditing("gender", character.gender); }}>
-            <ParameterChip label="Gender" value={character.gender || "Unknown"} />
-          </div>
-          <div onClick={(e) => { e.stopPropagation(); startEditing("archetype", character.archetype || "Void"); }}>
-            <ParameterChip label="Archetype" value={character.archetype || "Void"} />
-          </div>
+        {/* ── ROW 2: Description ── */}
+        <div className="pl-4 border-l-2 border-brand-gold/20">
+          {editingField === "trait" ? (
+            <div onClick={(e) => e.stopPropagation()}>
+              <textarea
+                autoFocus
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
+                rows={2}
+                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[11px] italic outline-none focus:border-brand-gold resize-none"
+              />
+              <SaveCancel />
+            </div>
+          ) : (
+            <p
+              onClick={(e) => startEdit(e, "trait", displayDesc)}
+              className={cn("text-[13px] leading-[1.7] italic transition-colors duration-300 font-sans", isActive ? "text-text-primary cursor-pointer hover:text-brand-gold" : "text-text-tertiary")}
+            >
+              {displayDesc
+                ? `"${displayDesc}"`
+                : <span className="text-white/20 not-italic">{isActive ? "외모/특성 클릭하여 입력" : "—"}</span>}
+            </p>
+          )}
         </div>
 
-        <div className="relative">
-          <div className="absolute -left-6 top-0 bottom-0 w-[2px] bg-brand-gold/20" />
-          <p 
-            onClick={(e) => {
-              e.stopPropagation();
-              startEditing("trait", character.trait || character.description || character.look);
-            }}
-            className={cn("text-sm leading-relaxed transition-colors duration-700 italic font-medium cursor-pointer hover:text-brand-gold", isActive ? "text-zinc-300" : "text-zinc-500")}
-          >
-            "{character.trait || character.description || character.look || "데이터 복구 중..."}"
-          </p>
+        {/* ── ROW 3: Desire ── */}
+        <div className="flex items-start gap-2">
+          <span className="text-[7px] font-black text-brand-gold/40 uppercase tracking-[0.3em] mt-0.5 shrink-0">욕구</span>
+          {editingField === "desire" ? (
+            <div className="flex-1" onClick={(e) => e.stopPropagation()}>
+              <input
+                autoFocus
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[10px] outline-none focus:border-brand-gold"
+              />
+              <SaveCancel />
+            </div>
+          ) : (
+            <p
+              onClick={(e) => startEdit(e, "desire", displayDesire)}
+              className={cn("text-[10px] font-medium flex-1 transition-colors", isActive ? "text-white/70 cursor-pointer hover:text-brand-gold" : "text-white/25")}
+            >
+              {displayDesire || <span className="italic text-white/20">{isActive ? "욕구 클릭하여 입력" : "—"}</span>}
+            </p>
+          )}
         </div>
       </div>
 
-      <AnimatePresence>
-        {editingField === "name" && renderInlineEditor("name", "text")}
-        {editingField === "job" && renderInlineEditor("job", "text")}
-        {editingField === "age" && renderInlineEditor("age", "slider")}
-        {editingField === "gender" && renderInlineEditor("gender", "select", ["Male", "Female", "Neutral", "Non-binary"])}
-        {editingField === "relationship_type" && renderInlineEditor("relationship_type", "select", ["Protagonist", "Antagonist", "Ally", "Foil"])}
-        {editingField === "archetype" && renderInlineEditor("archetype", "select", ["Hero", "Shadow", "Void", "Mentor", "Trickster"])}
-        {editingField === "trait" && renderInlineEditor("trait", "text")}
-      </AnimatePresence>
-
       {isActive && (
-        <div className="absolute top-[-10%] right-[-10%] w-[200px] h-[200px] bg-brand-gold/[0.03] blur-[60px] rounded-full pointer-events-none" />
+        <div className="absolute top-[-10%] right-[-10%] w-[180px] h-[180px] bg-brand-gold/[0.03] blur-[50px] rounded-full pointer-events-none" />
       )}
     </div>
   );

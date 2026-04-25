@@ -60,7 +60,10 @@ Only include scriptContent for Episode 1.
 
 ${adminSettings?.prompt_scenario_init || ''}`;
 
-    const userPrompt = `로그라인: "${project.logline || ''}" 기반으로 프로젝트를 시네마틱하게 생성하십시오.`;
+    const steerPrompt = project.steer_prompt || "";
+    const userPrompt = steerPrompt 
+      ? `다음 지시사항을 반영하여 프로젝트를 재생성하십시오: "${steerPrompt}"\n\n기존 로그라인: "${project.logline || ''}"`
+      : `로그라인: "${project.logline || ''}" 기반으로 프로젝트를 시네마틱하게 생성하십시오.`;
 
     console.log("[OMA] Phase 3: Sending Fetch to Anthropic (Raw VIBE)...");
     const response = await fetch(API_URL, {

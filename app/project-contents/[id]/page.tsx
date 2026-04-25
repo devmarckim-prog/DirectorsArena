@@ -298,16 +298,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     loadData();
   }, [id, isStreaming, triggerStreaming]);
 
-  const handleRegenerate = () => setIsRegenerateModalOpen(true);
+  const [steerPrompt, setSteerPrompt] = useState("");
+  const handleRegenerate = (prompt?: string) => {
+    setSteerPrompt(prompt || "");
+    setIsRegenerateModalOpen(true);
+  };
 
   const handleConfirmRegenerate = async () => {
     setIsStreaming(true);
+    setIsRegenerateModalOpen(false);
     setStreamedData({});
 
-    const result = await triggerRegenerateAction(id);
+    const result = await triggerRegenerateAction(id, steerPrompt);
     if (result.success) {
       await new Promise(r => setTimeout(r, 800));
       triggerStreaming(id);
+      setSteerPrompt("");
     } else {
       setIsStreaming(false);
       alert("Failed to trigger regeneration: " + (result.error || "Unknown error"));
