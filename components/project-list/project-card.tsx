@@ -235,14 +235,18 @@ export function ProjectCard({
                    <div className="space-y-2.5">
                      <div className="flex items-start justify-between">
                         <div className="flex flex-col space-y-0.5">
-                          <h3 className="text-[18px] font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-brand-gold transition-colors">
-                            {displayTitle}
+                          <h3 className="text-[18px] font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-brand-gold transition-colors flex items-baseline gap-2">
+                            <span>{displayTitle.replace(/\s*\(.*?\)\s*/g, "").trim()}</span>
+                            {(() => {
+                              const enTitle = meta?.title_en || meta?.story?.title_en || displayTitle.match(/\((.*?)\)/)?.[1];
+                              if (!enTitle) return null;
+                              return (
+                                <span className="text-[11px] font-medium text-white/30 uppercase tracking-widest truncate max-w-[150px]">
+                                  {enTitle}
+                                </span>
+                              );
+                            })()}
                           </h3>
-                          {(meta?.title_en || meta?.story?.title_en) && (
-                            <p className="text-[10px] font-medium text-white/30 uppercase tracking-widest line-clamp-1">
-                              {meta?.title_en || meta?.story?.title_en}
-                            </p>
-                          )}
                         </div>
                         <ArrowUpRight size={14} className="mt-1 text-white/20 group-hover:text-brand-gold transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
                      </div>
