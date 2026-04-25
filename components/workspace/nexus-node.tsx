@@ -31,7 +31,10 @@ export function NexusNode({ character, layout, isSelected, onClick }: NexusNodeP
 
   return (
     <motion.button
-      onClick={onClick}
+      onClick={(e) => {
+        console.log('🔴 NexusNode: CLICKED', { id: character.id, name: character.name });
+        onClick();
+      }}
       style={{
         position: 'absolute',
         left: `${leftPct}%`,

@@ -18,9 +18,15 @@ interface NexusGraphProps {
 const engine = new AntigravityLayoutEngine();
 
 export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphProps) {
+  // ✅ DEBUG LOG 1: Render check
+  console.log('🔴 NexusGraph: Rendering...', { charCount: characters?.length, selectedId });
 
   // ── Derive structured data ──
-  const nexusData = useMemo(() => deriveNexusData(characters ?? []), [characters]);
+  const nexusData = useMemo(() => {
+    const data = deriveNexusData(characters ?? []);
+    console.log('🔴 NexusGraph: Derived Data', { charCount: data.characters.length });
+    return data;
+  }, [characters]);
 
   // ── Calculate positions (deterministic) ──
   const positions = useMemo(
@@ -38,8 +44,19 @@ export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphPro
   const selectedChar = nexusData.characters.find((c) => c.id === selectedId) ?? null;
 
   const handleNodeClick = (id: string) => {
+    console.log('🔴 NexusGraph: Node clicked', id);
     onSelectId(selectedId === id ? null : id);
   };
+
+  // ✅ DEBUG LOG 2: State Sync Check
+  useEffect(() => {
+    console.log('🔴 NexusGraph: selectedId Sync', { selectedId });
+    if (selectedId) {
+      const found = nexusData.characters.find(c => c.id === selectedId);
+      const pos = positions[selectedId];
+      console.log('🔴 NexusGraph: Selection Details', { found, pos });
+    }
+  }, [selectedId, nexusData.characters, positions]);
 
   // ── Empty state ──
   if (nexusData.characters.length === 0) {
@@ -58,6 +75,16 @@ export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphPro
       className="relative w-full overflow-hidden rounded-[3rem] bg-[radial-gradient(ellipse_at_center,_#12121f_0%,_#050508_100%)] border border-white/5"
       style={{ height: '600px' }}
     >
+      {/* ✅ EMERGENCY FALLBACK DEBUG UI */}
+      {selectedId && (
+        <div style={{
+          position: 'absolute', top: 10, left: 10, zIndex: 9999,
+          background: 'red', color: 'white', padding: '10px', fontSize: '10px', fontWeight: 'bold'
+        }}>
+          DEBUG SELECT: {selectedId} | {nexusData.characters.find(c => c.id === selectedId)?.name}
+        </div>
+      )}
+
       {/* ── SVG Layer: Faction zones + Connection lines ── */}
       <svg
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
@@ -169,11 +196,14 @@ export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphPro
       </div>
 
       {/* ── Smart Character Detail Card (Dynamic Positioning) ── */}
-      <motion.div className="absolute inset-0 pointer-events-none" style={{ zIndex: 100 }}>
+      <AnimatePresence mode="wait">
         {selectedId && (() => {
           const char = nexusData.characters.find(c => c.id === selectedId);
           const charPos = positions[selectedId];
-          if (!char || !charPos) return null;
+          if (!char || !charPos) {
+            console.log('🔴 NexusGraph: Card hidden - data missing', { char, charPos });
+            return null;
+          }
 
           // 1. Calculate base position (normalized to viewport %)
           const cardWidth = 320;
@@ -189,6 +219,8 @@ export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphPro
           if (isBottomOverflow) {
             cardY = ((charPos.y - charPos.size - 180) / CANVAS_H) * 100;
           }
+
+          console.log('🔴 NexusGraph: Rendering Card', { name: char.name, cardX, cardY });
 
           return (
             <motion.div
@@ -260,7 +292,7 @@ export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphPro
             </motion.div>
           );
         })()}
-      </motion.div>
+      </AnimatePresence>
 
       {/* ── Legend ── */}
       <div style={{ position: 'absolute', top: 16, right: 20, display: 'flex', flexDirection: 'column', gap: '6px', zIndex: 10 }}>
