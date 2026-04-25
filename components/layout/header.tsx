@@ -43,7 +43,7 @@ export function Header() {
             {/* Version Badge: No border, 20% larger font (12px) */}
             <div className="flex items-center gap-2 group transition-all">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(197,160,89,1)]" />
-              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v3.3.4</span>
+              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v3.4.0</span>
             </div>
 
             {/* Admin Toggle: Keep as is */}

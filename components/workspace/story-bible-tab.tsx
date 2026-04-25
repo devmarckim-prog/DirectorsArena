@@ -235,8 +235,6 @@ export function StoryBibleTab({
                   >
                     Send Protocol
                   </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -281,7 +279,6 @@ export function StoryBibleTab({
           </div>
         </div>
       </div>
-
       <AnimatePresence>
         {editingCharId && (
           <CharacterEditForm 
@@ -290,8 +287,6 @@ export function StoryBibleTab({
             onSave={(updates) => onUpdateCharacter(editingCharId, updates)} 
           />
         )}
-      </AnimatePresence>
-
       </AnimatePresence>
     </div>
   );
