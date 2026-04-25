@@ -234,21 +234,21 @@ export function ProjectCard({
                 <div className="absolute top-[210px] left-0 right-0 bottom-0 p-5 pt-3.5 flex flex-col justify-between z-10">
                    <div className="space-y-2.5">
                      <div className="flex items-start justify-between">
-                        <div className="flex flex-col space-y-0.5">
-                          <h3 className="text-[18px] font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-brand-gold transition-colors flex items-baseline gap-2">
-                            <span>{displayTitle.replace(/\s*\(.*?\)\s*/g, "").trim()}</span>
-                            {(() => {
-                              const enTitle = meta?.title_en || meta?.story?.title_en || displayTitle.match(/\((.*?)\)/)?.[1];
-                              if (!enTitle) return null;
-                              return (
-                                <span className="text-[11px] font-medium text-white/30 uppercase tracking-widest truncate max-w-[150px]">
-                                  {enTitle}
-                                </span>
-                              );
-                            })()}
+                        <div className="flex flex-col space-y-1">
+                          <h3 className="text-[18px] font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-brand-gold transition-colors">
+                            {displayTitle.replace(/\s*\(.*?\)\s*/g, "").trim()}
                           </h3>
+                          {(() => {
+                            const enTitle = meta?.title_en || meta?.story?.title_en || displayTitle.match(/\((.*?)\)/)?.[1];
+                            if (!enTitle) return null;
+                            return (
+                              <span className="text-[10px] font-medium text-white/30 uppercase tracking-[0.2em] line-clamp-1">
+                                {enTitle}
+                              </span>
+                            );
+                          })()}
                         </div>
-                        <ArrowUpRight size={14} className="mt-1 text-white/20 group-hover:text-brand-gold transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
+                        <ArrowUpRight size={14} className="absolute top-0 right-0 text-white/20 group-hover:text-brand-gold transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
                      </div>
                      <div className="flex items-center space-x-2 text-[9px] text-neutral-500 font-medium">
                        <span className="opacity-40 tracking-tighter">
