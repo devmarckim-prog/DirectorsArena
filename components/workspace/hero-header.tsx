@@ -67,7 +67,7 @@ export function HeroHeader({
             ease: "easeInOut"
           }}
           className={cn(
-            "text-3xl md:text-[68px] font-black italic font-serif uppercase tracking-tighter text-white leading-none relative z-10",
+            "text-3xl md:text-[68px] font-black font-serif uppercase tracking-tighter text-white leading-none relative z-10",
             "text-center px-6 md:px-0"
           )}
           style={{ 

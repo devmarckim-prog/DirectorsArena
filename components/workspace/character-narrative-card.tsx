@@ -97,7 +97,7 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
                 <h4
                   onClick={(e) => startEdit(e, "name", local.name)}
                   className={cn(
-                    "text-[20px] font-bold uppercase tracking-tight leading-none transition-colors font-sans",
+                    "text-[23px] font-bold uppercase tracking-tight leading-none transition-colors font-sans",
                     isActive ? "text-brand-gold cursor-pointer hover:opacity-80" : "text-text-primary"
                   )}
                 >
@@ -120,7 +120,7 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
                 ) : (
                   <span
                     onClick={(e) => startEdit(e, "age", local.age ?? 0)}
-                    className={cn("text-[11px] font-medium text-text-tertiary leading-none transition-colors font-mono", isActive && "cursor-pointer hover:text-brand-gold")}
+                    className={cn("text-[13px] font-medium text-text-tertiary leading-none transition-colors font-mono", isActive && "cursor-pointer hover:text-brand-gold")}
                   >
                     {local.age > 0 ? `${local.age}세` : "나이 미상"}
                   </span>
@@ -136,14 +136,14 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
                   value={tempValue}
                   onChange={(e) => setTempValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-                  className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[10px] font-medium uppercase tracking-widest outline-none focus:border-brand-gold font-mono"
+                  className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[12px] font-medium uppercase tracking-widest outline-none focus:border-brand-gold font-mono"
                 />
                 <SaveCancel />
               </div>
             ) : (
               <span
                 onClick={(e) => startEdit(e, "job", local.job || local.role)}
-                className={cn("text-[11px] font-medium text-text-tertiary uppercase tracking-[0.1em] block transition-colors font-mono", isActive && "cursor-pointer hover:text-text-secondary")}
+                className={cn("text-[13px] font-medium text-text-tertiary uppercase tracking-[0.1em] block transition-colors font-mono", isActive && "cursor-pointer hover:text-text-secondary")}
               >
                 {local.job || local.role || "역할 미정"}
               </span>
@@ -152,17 +152,17 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
 
           {/* Shield + edit button */}
           <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <Shield size={18} className={isActive ? "text-brand-gold" : "text-white/10"} />
+            <Shield size={20} className={isActive ? "text-brand-gold" : "text-white/10"} />
             {isActive && (
               <button onClick={(e) => { e.stopPropagation(); onEditFullMode(); }} className="p-1.5 bg-brand-gold/10 hover:bg-brand-gold/20 rounded-full transition-colors">
-                <Edit3 size={11} className="text-brand-gold" />
+                <Edit3 size={13} className="text-brand-gold" />
               </button>
             )}
           </div>
         </div>
 
         {/* ── ROW 2: Description ── */}
-        <div className="pl-4 border-l-2 border-brand-gold/20">
+        <div className="pl-5 border-l-2 border-brand-gold/20">
           {editingField === "trait" ? (
             <div onClick={(e) => e.stopPropagation()}>
               <textarea
@@ -171,14 +171,14 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
                 onChange={(e) => setTempValue(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
                 rows={2}
-                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[11px] italic outline-none focus:border-brand-gold resize-none"
+                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[13px] italic outline-none focus:border-brand-gold resize-none"
               />
               <SaveCancel />
             </div>
           ) : (
             <p
               onClick={(e) => startEdit(e, "trait", displayDesc)}
-              className={cn("text-[13px] leading-[1.7] italic transition-colors duration-300 font-sans", isActive ? "text-text-primary cursor-pointer hover:text-brand-gold" : "text-text-tertiary")}
+              className={cn("text-[15px] leading-[1.75] italic transition-colors duration-300 font-sans", isActive ? "text-text-primary cursor-pointer hover:text-brand-gold" : "text-text-tertiary")}
             >
               {displayDesc
                 ? `"${displayDesc}"`
@@ -188,8 +188,8 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
         </div>
 
         {/* ── ROW 3: Desire ── */}
-        <div className="flex items-start gap-2">
-          <span className="text-[7px] font-black text-brand-gold/40 uppercase tracking-[0.3em] mt-0.5 shrink-0">욕구</span>
+        <div className="flex items-start gap-3">
+          <span className="text-[8px] font-black text-brand-gold/40 uppercase tracking-[0.3em] mt-1 shrink-0">욕구</span>
           {editingField === "desire" ? (
             <div className="flex-1" onClick={(e) => e.stopPropagation()}>
               <input
@@ -197,14 +197,14 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
                 value={tempValue}
                 onChange={(e) => setTempValue(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[10px] outline-none focus:border-brand-gold"
+                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[12px] outline-none focus:border-brand-gold"
               />
               <SaveCancel />
             </div>
           ) : (
             <p
               onClick={(e) => startEdit(e, "desire", displayDesire)}
-              className={cn("text-[10px] font-medium flex-1 transition-colors", isActive ? "text-white/70 cursor-pointer hover:text-brand-gold" : "text-white/25")}
+              className={cn("text-[12px] font-medium flex-1 transition-colors", isActive ? "text-white/70 cursor-pointer hover:text-brand-gold" : "text-white/25")}
             >
               {displayDesire || <span className="italic text-white/20">{isActive ? "욕구 클릭하여 입력" : "—"}</span>}
             </p>

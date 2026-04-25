@@ -98,7 +98,6 @@ body::after {
     text-transform: uppercase;
     letter-spacing: -0.05em;
     color: var(--brand-gold);
-    font-style: italic;
   }
   
   .font-clean-sans {

@@ -54,10 +54,11 @@ export function StoryBibleTab({
 
   useEffect(() => {
     if (carouselRef.current) {
-      const activeCard = carouselRef.current.children[activeIndex] as HTMLElement;
+      const cards = carouselRef.current.querySelectorAll('[data-character-card]');
+      const activeCard = cards[activeIndex] as HTMLElement;
       if (activeCard) {
         carouselRef.current.scrollTo({
-          left: activeCard.offsetLeft - 20,
+          left: activeCard.offsetLeft - (carouselRef.current.offsetWidth / 2) + (activeCard.offsetWidth / 2),
           behavior: 'smooth'
         });
       }
@@ -71,19 +72,19 @@ export function StoryBibleTab({
     const idx = characters.findIndex((c) => c.id === id);
     if (idx !== -1) {
       setActiveIndex(idx);
-      // Enhanced scroll sync with longer delay for reliable rendering
+      // Double check scroll sync with a small delay
       setTimeout(() => {
         if (carouselRef.current) {
           const cards = carouselRef.current.querySelectorAll('[data-character-card]');
           const targetCard = cards[idx] as HTMLElement;
           if (targetCard) {
             carouselRef.current.scrollTo({
-              left: targetCard.offsetLeft - 40, // Increased offset for better visibility
+              left: targetCard.offsetLeft - (carouselRef.current.offsetWidth / 2) + (targetCard.offsetWidth / 2),
               behavior: 'smooth'
             });
           }
         }
-      }, 100);
+      }, 150);
     }
   };
 
@@ -115,11 +116,11 @@ export function StoryBibleTab({
                       <div className="w-[3px] h-auto bg-brand-gold shrink-0" />
                       <div className="flex flex-col">
                         {logline && (
-                          <p className="font-cinematic-serif text-[24px] leading-snug tracking-tight mb-4 italic opacity-90">
+                          <p className="font-cinematic-serif text-[24px] leading-snug tracking-tight mb-4 opacity-90">
                             "{logline}"
                           </p>
                         )}
-                        <div className="text-[16px] text-text-secondary leading-[1.75] max-w-[65ch] whitespace-pre-wrap font-sans">
+                        <div className="text-[18px] text-text-secondary leading-[1.8] max-w-[65ch] whitespace-pre-wrap font-sans">
                           {narrativeText}
                         </div>
                       </div>
@@ -132,7 +133,7 @@ export function StoryBibleTab({
                       <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="mb-6">
                         <Loader2 size={42} className="text-brand-gold" />
                       </motion.div>
-                      <p className="text-[10px] font-black text-brand-gold uppercase tracking-[0.4em] opacity-80 mb-4">
+                      <p className="text-[12px] font-black text-brand-gold uppercase tracking-[0.4em] opacity-80 mb-4">
                         {isStreaming ? "Synthesizing Narrative Strands..." : "Architecting Narrative DNA..."}
                       </p>
                     </div>
@@ -170,9 +171,9 @@ export function StoryBibleTab({
                 { type: "외적 갈등", description: metadata?.story?.conflicts?.external || "사회 시스템과의 대립" },
                 { type: "사회적 갈등", description: metadata?.story?.conflicts?.social || "계급간의 보이지 않는 벽" }
               ]).map((item: any, idx: number) => (
-                <div key={idx} className="bg-bg-secondary/40 border border-white/5 p-5 rounded-[12px] flex items-center gap-6 group hover:border-brand-gold/20 transition-all">
-                  <span className="w-24 shrink-0 text-[10px] font-mono font-bold text-brand-gold/60 uppercase tracking-widest">{item.type}</span>
-                  <p className="text-sm font-medium text-text-primary leading-snug italic border-l border-white/10 pl-6">"{item.description}"</p>
+                <div key={idx} className="bg-bg-secondary/40 border border-white/5 p-6 rounded-[12px] flex items-center gap-6 group hover:border-brand-gold/20 transition-all">
+                  <span className="w-28 shrink-0 text-[11px] font-mono font-bold text-brand-gold/60 uppercase tracking-widest">{item.type}</span>
+                  <p className="text-[16px] font-medium text-text-primary leading-snug border-l border-white/10 pl-6">"{item.description}"</p>
                 </div>
               ))}
             </div>
@@ -185,7 +186,7 @@ export function StoryBibleTab({
                 value={steerPrompt}
                 onChange={(e) => setSteerPrompt(e.target.value)}
                 placeholder="작품의 서사 방향이나 설정을 변경하려면 여기에 입력하세요..."
-                className="flex-1 bg-transparent border-none text-text-primary text-[14px] leading-relaxed placeholder:text-text-tertiary/40 resize-none outline-none min-h-[44px] py-2 font-sans"
+                className="flex-1 bg-transparent border-none text-text-primary text-[16px] leading-relaxed placeholder:text-text-tertiary/40 resize-none outline-none min-h-[44px] py-2 font-sans"
               />
               <button 
                 onClick={() => {
@@ -230,8 +231,8 @@ export function StoryBibleTab({
                       key={i}
                       onClick={() => setActiveIndex(i)}
                       className={cn(
-                        "h-1 rounded-full transition-all duration-500 cursor-pointer hover:opacity-100",
-                        activeIndex === i ? "w-8 bg-brand-gold" : "w-2 bg-white/10 hover:bg-white/30"
+                        "h-1.5 rounded-full transition-all duration-500 cursor-pointer hover:opacity-100",
+                        activeIndex === i ? "w-10 bg-brand-gold" : "w-2.5 bg-white/10 hover:bg-white/30"
                       )}
                     />
                   ))}
