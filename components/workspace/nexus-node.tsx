@@ -43,8 +43,19 @@ export function NexusNode({ character, layout, isSelected, onClick }: NexusNodeP
         padding: 0,
         cursor: 'pointer',
       }}
-      animate={{ scale: isSelected ? 1.2 : 1 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
+      animate={{ 
+        scale: isSelected ? 1.25 : 1,
+        y: isSelected ? 0 : [0, -6, 0]
+      }}
+      transition={{ 
+        scale: { duration: 0.3, ease: 'easeOut' },
+        y: {
+          duration: floatDuration,
+          repeat: isSelected ? 0 : Infinity,
+          ease: "easeInOut",
+          delay: floatDelay
+        }
+      }}
     >
 
       {/* Avatar circle */}

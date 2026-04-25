@@ -168,7 +168,99 @@ export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphPro
         })}
       </div>
 
-      {/* Detail panel removed — shown in Character Roster carousel instead */}
+      {/* ── Smart Character Detail Card (Dynamic Positioning) ── */}
+      <motion.div className="absolute inset-0 pointer-events-none" style={{ zIndex: 100 }}>
+        {selectedId && (() => {
+          const char = nexusData.characters.find(c => c.id === selectedId);
+          const charPos = positions[selectedId];
+          if (!char || !charPos) return null;
+
+          // 1. Calculate base position (normalized to viewport %)
+          const cardWidth = 320;
+          const cardHeight = 200;
+          let cardX = (charPos.x / CANVAS_W) * 100;
+          let cardY = ((charPos.y + charPos.size + 40) / CANVAS_H) * 100;
+
+          // 2. Boundary Checks
+          if (cardX < 20) cardX = 20;
+          if (cardX > 80) cardX = 80;
+
+          const isBottomOverflow = cardY > 65;
+          if (isBottomOverflow) {
+            cardY = ((charPos.y - charPos.size - 180) / CANVAS_H) * 100;
+          }
+
+          return (
+            <motion.div
+              key={selectedId}
+              initial={{ scale: 0.9, opacity: 0, y: isBottomOverflow ? 10 : -10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              style={{
+                position: 'absolute',
+                left: `${cardX}%`,
+                top: `${cardY}%`,
+                transform: 'translateX(-50%)',
+                background: 'rgba(5, 5, 10, 0.92)',
+                border: `1.5px solid ${charPos.color}44`,
+                borderRadius: '24px',
+                padding: '24px',
+                width: cardWidth,
+                backdropFilter: 'blur(20px)',
+                boxShadow: `0 20px 50px rgba(0,0,0,0.8), 0 0 30px ${charPos.color}15`,
+                pointerEvents: 'auto',
+                zIndex: 1000
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Connector Arrow */}
+              <div style={{
+                position: 'absolute',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                [isBottomOverflow ? 'bottom' : 'top']: '-8px',
+                width: 0, height: 0,
+                borderLeft: '8px solid transparent',
+                borderRight: '8px solid transparent',
+                [isBottomOverflow ? 'borderTop' : 'borderBottom']: `8px solid ${charPos.color}44`,
+              }} />
+
+              {/* Close Button */}
+              <button 
+                onClick={() => onSelectId(null)}
+                className="absolute top-4 right-4 text-white/20 hover:text-white transition-colors p-1"
+              >
+                <Fingerprint size={14} className="rotate-45" />
+              </button>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: charPos.color }} />
+                  <span className="text-[10px] font-black tracking-[0.3em] uppercase" style={{ color: charPos.color }}>
+                    {char.faction}
+                  </span>
+                </div>
+
+                <div>
+                  <h4 className="text-[20px] font-bold text-white tracking-tight leading-tight mb-1">
+                    {char.name}
+                  </h4>
+                  <p className="text-[11px] font-medium text-white/40 uppercase tracking-widest font-mono">
+                    {char.job || char.role}
+                  </p>
+                </div>
+
+                {char.look && (
+                  <p className="text-[13px] text-text-secondary leading-relaxed italic border-t border-white/5 pt-3">
+                    "{char.look}"
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          );
+        })()}
+      </motion.div>
 
       {/* ── Legend ── */}
       <div style={{ position: 'absolute', top: 16, right: 20, display: 'flex', flexDirection: 'column', gap: '6px', zIndex: 10 }}>
