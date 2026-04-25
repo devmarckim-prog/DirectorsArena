@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint } from "lucide-react";
 import { deriveNexusData } from "./nexus-types";
 import { AntigravityLayoutEngine, CANVAS_W, CANVAS_H } from "./nexus-layout";
@@ -183,14 +183,13 @@ export function NexusGraph({ characters, selectedId, onSelectId }: NexusGraphPro
           const layout = positions[char.id];
           if (!layout) return null;
           return (
-            <div key={char.id} style={{ pointerEvents: 'auto' }}>
-              <NexusNode
-                character={char}
-                layout={layout}
-                isSelected={selectedId === char.id}
-                onClick={() => handleNodeClick(char.id)}
-              />
-            </div>
+            <NexusNode
+              key={char.id}
+              character={char}
+              layout={layout}
+              isSelected={selectedId === char.id}
+              onClick={() => handleNodeClick(char.id)}
+            />
           );
         })}
       </div>
