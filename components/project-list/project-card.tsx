@@ -270,11 +270,11 @@ export function ProjectCard({
                         </div>
                         <ArrowUpRight size={14} className="absolute top-0 right-0 text-white/20 group-hover:text-brand-gold transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
                      </div>
-                     <div className="flex items-center space-x-2 text-[9px] text-neutral-500 font-medium">
-                       <span className="opacity-40 tracking-tighter">
-                         {new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                       </span>
-                     </div>
+                      <div className="flex items-center space-x-2 text-[9px] text-neutral-500 font-medium">
+                        <span className="opacity-40 tracking-tighter uppercase">
+                          {project.is_sample ? "MOCK PREVIEW" : "READY TO SYNC"}
+                        </span>
+                      </div>
                    </div>
                    <div className="w-full space-y-4">
                      {/* Bottom Bar from Image 2 */}
