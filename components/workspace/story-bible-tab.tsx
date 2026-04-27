@@ -39,13 +39,46 @@ export function StoryBibleTab({
     const dbChars = project.characters || [];
     
     const charMap = new Map();
-    [...dbChars, ...metaChars].forEach(c => {
-      if (c && c.name && !charMap.has(c.name)) {
-        charMap.set(c.name, c);
+    
+    // DB characters take precedence
+    dbChars.forEach(c => {
+      if (c && c.id) {
+        charMap.set(c.id, { ...c, aliases: new Set([c.name]) });
+      } else if (c && c.name) {
+        charMap.set(c.name, { ...c, aliases: new Set([c.name]) });
       }
     });
     
-    return Array.from(charMap.values());
+    // Merge meta characters (to preserve original names as aliases)
+    metaChars.forEach(c => {
+      if (c && c.id && charMap.has(c.id)) {
+        const existing = charMap.get(c.id);
+        if (c.name) existing.aliases.add(c.name);
+      } else if (c && c.name && charMap.has(c.name)) {
+        // Skip, already merged by name
+      } else if (c && c.name) {
+        charMap.set(c.id || c.name, { ...c, aliases: new Set([c.name]) });
+      }
+    });
+    
+    return Array.from(charMap.values()).map(c => {
+      const aliasesArray = Array.from(c.aliases || [c.name]);
+      const allAliases = new Set<string>();
+      
+      aliasesArray.forEach((alias: any) => {
+        if (alias && typeof alias === 'string') {
+          allAliases.add(alias);
+          if (alias.length >= 3) {
+            allAliases.add(alias.substring(1)); // Add given name
+          }
+        }
+      });
+      
+      return { 
+        ...c, 
+        matchAliases: Array.from(allAliases).sort((a, b) => b.length - a.length)
+      };
+    });
   }, [metadata?.characters, project.characters]);
 
   const majorCharacters = useMemo(() => {
@@ -132,30 +165,55 @@ export function StoryBibleTab({
                   }
                 }
 
-                // ✅ 인물명 감지 및 스팬 래핑 함수
-                const parseNarrativeWithCharacters = (text: string, chars: Character[]) => {
+                // ✅ 인물명 감지 및 스팬 래핑 함수 (Alias 지원 및 텍스트 자동 치환)
+                const parseNarrativeWithCharacters = (text: string, chars: any[]) => {
                   if (!text || !chars.length) return [{ type: 'text', content: text, id: '' }];
-                  const sorted = [...chars].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
+                  
+                  // Build a flat list of all aliases
+                  const allAliases: { charId: string, primaryName: string, alias: string }[] = [];
+                  chars.forEach(char => {
+                    char.matchAliases?.forEach((alias: string) => {
+                      if (alias && alias.length >= 2) {
+                        allAliases.push({ charId: char.id ?? char.name, primaryName: char.name, alias });
+                      }
+                    });
+                  });
+                  // Sort by alias length descending to match longest possible names first
+                  allAliases.sort((a, b) => b.alias.length - a.alias.length);
+
                   const parts: { type: 'text' | 'character'; content: string; id: string }[] = [];
                   let remaining = text;
 
                   while (remaining.length > 0) {
-                    let matched = false;
-                    for (const char of sorted) {
-                      const idx = remaining.indexOf(char.name);
-                      if (idx === 0) {
-                        parts.push({ type: 'character', content: char.name, id: char.id ?? char.name });
-                        remaining = remaining.slice(char.name.length);
-                        matched = true;
-                        break;
-                      } else if (idx > 0) {
-                        parts.push({ type: 'text', content: remaining.slice(0, idx), id: '' });
-                        remaining = remaining.slice(idx);
-                        matched = true;
-                        break;
+                    let bestMatchIdx = -1;
+                    let bestMatchAlias: any = null;
+
+                    for (const item of allAliases) {
+                      const idx = remaining.indexOf(item.alias);
+                      if (idx !== -1) {
+                        if (bestMatchIdx === -1 || idx < bestMatchIdx) {
+                          bestMatchIdx = idx;
+                          bestMatchAlias = item;
+                        }
                       }
                     }
-                    if (!matched) {
+
+                    if (bestMatchIdx !== -1) {
+                      if (bestMatchIdx > 0) {
+                        parts.push({ type: 'text', content: remaining.slice(0, bestMatchIdx), id: '' });
+                      }
+                      
+                      // If the matched alias is an old full name, replace it with the new primary name
+                      const isOldFullName = bestMatchAlias.alias !== bestMatchAlias.primaryName && bestMatchAlias.alias.length >= 3;
+                      const displayContent = isOldFullName ? bestMatchAlias.primaryName : bestMatchAlias.alias;
+                      
+                      parts.push({ 
+                        type: 'character', 
+                        content: displayContent,
+                        id: bestMatchAlias.charId 
+                      });
+                      remaining = remaining.slice(bestMatchIdx + bestMatchAlias.alias.length);
+                    } else {
                       parts.push({ type: 'text', content: remaining, id: '' });
                       break;
                     }
