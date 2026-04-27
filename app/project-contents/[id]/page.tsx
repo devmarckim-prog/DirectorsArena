@@ -56,7 +56,7 @@ const CastingBoardShell = ({ projectId, isUnlocked, metadata }: { projectId: str
   if (data || metadata?.castingRecommendations) {
     const list = data || metadata.castingRecommendations;
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {list.map((c: any, idx: number) => (
           <div key={idx} className="bg-white/5 border border-white/10 rounded-[40px] p-10 flex flex-col items-center text-center group hover:border-brand-gold/30 transition-all">
             <div className="w-24 h-24 rounded-full bg-neutral-900 border border-white/10 mb-8 flex items-center justify-center overflow-hidden">
@@ -67,13 +67,22 @@ const CastingBoardShell = ({ projectId, isUnlocked, metadata }: { projectId: str
             <p className="text-xs text-neutral-500 font-medium leading-relaxed italic">"{c.reason}"</p>
           </div>
         ))}
-      </div>
+      </motion.div>
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center py-32 border border-dashed border-white/10 rounded-3xl bg-white/[0.02]">
-      <Sparkles size={48} className="text-neutral-700 mb-6" />
-      <button onClick={handleGenerate} disabled={!isUnlocked || isLoading} className={cn("px-8 py-4 rounded-full font-black uppercase tracking-widest text-xs transition-all", isUnlocked ? "bg-brand-gold text-black active:scale-95" : "opacity-30")}>Analyze Casting</button>
+    <div className="flex flex-col items-center justify-center py-40 border border-dashed border-white/10 rounded-[40px] bg-white/[0.01]">
+      <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/10">
+        <User size={32} className="text-neutral-700" />
+      </div>
+      <h3 className="text-xl font-black text-white uppercase tracking-[0.4em] mb-4">Production Casting</h3>
+      <p className="text-[10px] text-neutral-500 mb-10 max-w-xs text-center font-medium leading-[1.8] opacity-60 uppercase tracking-widest">
+        Analyze the narrative to identify top-tier talent matches based on character DNA.
+      </p>
+      <button onClick={handleGenerate} disabled={!isUnlocked || isLoading} className={cn("px-10 py-5 rounded-full font-black uppercase tracking-[0.3em] text-[10px] transition-all", isUnlocked ? "bg-brand-gold text-black hover:shadow-[0_0_30px_rgba(197,160,89,0.3)] active:scale-95" : "bg-neutral-900 border border-neutral-800 text-neutral-600 cursor-not-allowed opacity-40")}>
+        {isLoading ? "Analyzing Talent..." : "Analyze Casting"}
+      </button>
+      {!isUnlocked && <p className="mt-6 text-[9px] font-bold text-brand-gold/40 uppercase tracking-widest animate-pulse">Unlock scenario first to enable casting</p>}
     </div>
   );
 };
@@ -92,17 +101,57 @@ const BudgetEstimatorShell = ({ projectId, isUnlocked, metadata }: { projectId: 
   };
   if (data || metadata?.budgetEstimate) {
     const totalCost = data?.estimated_cost || 0;
-    return <div className="bg-white/5 border border-white/10 rounded-[40px] p-12 text-center"><h3 className="text-xs font-black text-brand-gold uppercase mb-4 tracking-widest">Estimated Budget</h3><p className="text-5xl font-black text-white tracking-tighter">₩{totalCost.toLocaleString()}</p></div>;
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white/5 border border-white/10 rounded-[40px] p-20 text-center">
+        <h3 className="text-xs font-black text-brand-gold uppercase mb-6 tracking-[0.5em]">Estimated Production Budget</h3>
+        <p className="text-7xl font-black text-white tracking-tighter mb-4">₩{totalCost.toLocaleString()}</p>
+        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Calculated based on current scene complexity and scale</p>
+      </motion.div>
+    );
   }
-  return <div className="text-center py-32 border border-dashed border-white/10 rounded-3xl"><DollarSign size={48} className="mx-auto text-neutral-700 mb-6"/><button onClick={handleGenerate} disabled={!isUnlocked || isLoading} className="px-8 py-4 bg-brand-gold text-black rounded-full font-black uppercase text-xs">Estimate Budget</button></div>;
+  return (
+    <div className="flex flex-col items-center justify-center py-40 border border-dashed border-white/10 rounded-[40px] bg-white/[0.01]">
+      <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/10">
+        <DollarSign size={32} className="text-neutral-700" />
+      </div>
+      <h3 className="text-xl font-black text-white uppercase tracking-[0.4em] mb-4">Financial Forecasting</h3>
+      <p className="text-[10px] text-neutral-500 mb-10 max-w-xs text-center font-medium leading-[1.8] opacity-60 uppercase tracking-widest">
+        Automated budget estimation aligned with cinematic scale and production value.
+      </p>
+      <button onClick={handleGenerate} disabled={!isUnlocked || isLoading} className={cn("px-10 py-5 rounded-full font-black uppercase tracking-[0.3em] text-[10px] transition-all", isUnlocked ? "bg-brand-gold text-black hover:shadow-[0_0_30px_rgba(197,160,89,0.3)] active:scale-95" : "bg-neutral-900 border border-neutral-800 text-neutral-600 cursor-not-allowed opacity-40")}>
+        {isLoading ? "Calculating..." : "Estimate Budget"}
+      </button>
+      {!isUnlocked && <p className="mt-6 text-[9px] font-bold text-brand-gold/40 uppercase tracking-widest animate-pulse">Unlock scenario first to enable estimation</p>}
+    </div>
+  );
 };
 
 const ScriptBreakdownShell = ({ episodeId, isScriptReady }: { episodeId: string | undefined; isScriptReady: boolean }) => (
-  <div className="text-center py-32 border border-dashed border-white/10 rounded-3xl"><Clapperboard size={48} className="mx-auto text-neutral-700 mb-6"/><button disabled={!isScriptReady} className="px-8 py-4 bg-white text-black rounded-full font-black uppercase text-xs disabled:opacity-50">Generate Breakdown</button></div>
+  <div className="flex flex-col items-center justify-center py-40 border border-dashed border-white/10 rounded-[40px] bg-white/[0.01]">
+    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/10">
+      <Clapperboard size={32} className="text-neutral-700" />
+    </div>
+    <h3 className="text-xl font-black text-white uppercase tracking-[0.4em] mb-4">Script Breakdown</h3>
+    <p className="text-[10px] text-neutral-500 mb-10 max-w-xs text-center font-medium leading-[1.8] opacity-60 uppercase tracking-widest">
+      Extracting production elements, props, and talent requirements from finalized script.
+    </p>
+    <button disabled={!isScriptReady} className="px-10 py-5 bg-white text-black rounded-full font-black uppercase tracking-[0.3em] text-[10px] disabled:opacity-30 disabled:cursor-not-allowed">Generate Breakdown</button>
+    {!isScriptReady && <p className="mt-6 text-[9px] font-bold text-brand-gold/40 uppercase tracking-widest animate-pulse">Finalize script to enable breakdown</p>}
+  </div>
 );
 
 const PPLLocationShell = ({ episodeId, isScriptReady }: { episodeId: string | undefined; isScriptReady: boolean }) => (
-  <div className="text-center py-32 border border-dashed border-white/10 rounded-3xl"><MapPin size={48} className="mx-auto text-neutral-700 mb-6"/><button disabled={!isScriptReady} className="px-8 py-4 bg-brand-gold text-black rounded-full font-black uppercase text-xs disabled:opacity-50">Scout PPL Locations</button></div>
+  <div className="flex flex-col items-center justify-center py-40 border border-dashed border-white/10 rounded-[40px] bg-white/[0.01]">
+    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/10">
+      <MapPin size={32} className="text-neutral-700" />
+    </div>
+    <h3 className="text-xl font-black text-white uppercase tracking-[0.4em] mb-4">Location Scouting</h3>
+    <p className="text-[10px] text-neutral-500 mb-10 max-w-xs text-center font-medium leading-[1.8] opacity-60 uppercase tracking-widest">
+      AI-driven PPL integration and location matching based on narrative context.
+    </p>
+    <button disabled={!isScriptReady} className="px-10 py-5 bg-brand-gold text-black rounded-full font-black uppercase tracking-[0.3em] text-[10px] disabled:opacity-30 disabled:cursor-not-allowed">Scout PPL Locations</button>
+    {!isScriptReady && <p className="mt-6 text-[9px] font-bold text-brand-gold/40 uppercase tracking-widest animate-pulse">Finalize script to enable scouting</p>}
+  </div>
 );
 
 // ============================================

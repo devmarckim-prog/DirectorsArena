@@ -139,7 +139,7 @@ export function HeroHeader({
         {/* EN SUB */}
         {!isEditing && (
           <span className="text-[12px] md:text-[13px] font-black text-brand-gold uppercase tracking-[1em] md:tracking-[1.25em] mt-2 ml-[1em] md:ml-[1.25em] opacity-80">
-            {project.subtitle || subTitle}
+            {(project.subtitle || subTitle || "").toUpperCase()}
           </span>
         )}
 

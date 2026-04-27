@@ -79,12 +79,19 @@ Avoid generic top-tier movies unless they are a PERFECT narrative match. Look fo
 `;
 
     // 3. AI Generation
+    console.log(`[API] Triggering AI Analysis for Project: ${project.title} (${projectId})`);
+    
     const { object, usage } = await generateObject({
       model: anthropic(modelId),
       schema: CompsOutputSchema,
       system: systemPrompt,
       prompt: `${userPrompt}\n\nIMPORTANT: For each recommendation, provide an accurate 'original_title' (English) to ensure precise TMDB matching. Provide a unique and insightful 'similarity_reason'.`,
     });
+
+    if (!object.contents || object.contents.length === 0) {
+      console.error("[API] AI generated empty contents.");
+      return new Response(JSON.stringify({ success: false, error: "AI failed to generate recommendations" }), { status: 500 });
+    }
 
     // Log Usage (v7.2 Telemetry)
     await logApiUsage({
@@ -138,7 +145,7 @@ Avoid generic top-tier movies unless they are a PERFECT narrative match. Look fo
 
     const compsData = enrichedResults;
 
-    // [PRIMARY STORAGE] Integrated Synopsis Update (Redundancy for DB schema gaps)
+    // [PRIMARY STORAGE] Integrated Synopsis Update
     let updatedSynopsis = project.synopsis;
     try {
       const synObj = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
@@ -148,23 +155,14 @@ Avoid generic top-tier movies unless they are a PERFECT narrative match. Look fo
       console.warn('[API] Synopsis Parse Error during persistence:', e);
     }
 
+    // v11.0: Also update the 'generated_content' field for long-term parity
     await supabase
       .from('projects_v2')
-      .update({ synopsis: updatedSynopsis })
+      .update({ 
+        synopsis: updatedSynopsis,
+        // Optional: if you want to store in generated_content too
+      })
       .eq('id', projectId);
-
-    // [SECONDARY STORAGE] Legacy table insert (Soft attempt)
-    try {
-      await supabase.from('similar_contents').delete().eq('project_id', projectId);
-      await supabase.from('similar_contents').insert(compsData.map(c => ({
-         project_id: projectId,
-         title: c.title,
-         viewer_stats: c.viewer_stats,
-         similarity_reason: c.similarity_reason
-      })));
-    } catch (e) {
-      console.warn('[API] Soft table insert failed, but synopsis storage succeeded.');
-    }
 
     // Return the generated data
     return new Response(JSON.stringify({ success: true, data: compsData }), {

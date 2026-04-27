@@ -97,14 +97,12 @@ export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGene
         setData(json.data);
         onGenerated?.(json.data);
       } else {
-        await new Promise(resolve => setTimeout(resolve, 1500)); 
-        setData(MOCK_COMPS);
-        onGenerated?.(MOCK_COMPS);
+        console.error("[CompsTab] API returned no data or failed:", json.error);
+        setData([]); // Clear data to show empty state if analysis failed
       }
     } catch (e) { 
-      console.error(e);
-      setData(MOCK_COMPS); 
-      onGenerated?.(MOCK_COMPS);
+      console.error("[CompsTab] Critical fetch error:", e);
+      setData([]);
     }
     setIsLoading(false);
   };

@@ -154,6 +154,16 @@ export function NavigatorTab({ beats = [], ...props }: NavigatorTabProps) {
           beat_type: "Scene",
         }));
       }
+      
+      // 3순위: Default EP1 Scene 1 (If no scenes exist for EP1)
+      return [{
+        id: `ep1-scene-default`,
+        title: `Scene 1: 오프닝`,
+        description: `우측 상단의 [GENERATE SCENES] 버튼이나 하단의 [GENERATE SCRIPT] 버튼을 눌러 씬 구성과 대본 집필을 시작하세요.`,
+        timestamp_label: `00:05:00`,
+        act_number: 1,
+        beat_type: "Scene",
+      }];
     }
 
     return [];
@@ -243,7 +253,7 @@ export function NavigatorTab({ beats = [], ...props }: NavigatorTabProps) {
                         ) : hasScript ? (
                           <><RefreshCcw size={10} />Regenerate</>
                         ) : (
-                          <><Sparkles size={10} />Generate</>
+                          <><Sparkles size={10} />Generate EP</>
                         )}
                       </button>
                     )}
@@ -288,11 +298,20 @@ export function NavigatorTab({ beats = [], ...props }: NavigatorTabProps) {
                 <MapPin className="text-brand-gold w-4 h-4" />
                 Scene Matrix — EP {props.selectedEpisode.episode_number}
               </h4>
-              {sceneList.length > 0 && (
-                <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">
-                  {sceneList.length} SCENES
-                </span>
-              )}
+              <div className="flex items-center gap-4">
+                {sceneList.length > 0 && (
+                  <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">
+                    {sceneList.length} SCENES
+                  </span>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); props.handleGenerateEpisodeScript?.(props.selectedEpisode); }}
+                  disabled={props.isGenerating}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-brand-gold text-black rounded-full hover:shadow-[0_0_15px_rgba(197,160,89,0.3)] hover:scale-105 transition-all text-[9px] font-black uppercase tracking-widest disabled:opacity-50"
+                >
+                  <Sparkles size={10} /> Generate Scenes
+                </button>
+              </div>
             </div>
 
             {sceneList.length === 0 ? (
@@ -421,9 +440,16 @@ export function NavigatorTab({ beats = [], ...props }: NavigatorTabProps) {
                   }
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                  <Sparkles className="text-brand-gold mb-4" size={32} />
-                  <span className="text-xs uppercase tracking-[0.2em] font-bold">Script content empty. Awaiting Generation.</span>
+                <div className="flex flex-col items-center justify-center py-20 opacity-60">
+                  <Sparkles className="text-brand-gold mb-4" size={40} />
+                  <span className="text-xs uppercase tracking-[0.2em] font-bold text-white mb-6">Script content empty. Awaiting Generation.</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); props.handleGenerateEpisodeScript?.(props.selectedEpisode); }}
+                    disabled={props.isGenerating}
+                    className="px-8 py-3 bg-brand-gold text-black rounded-full font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_20px_rgba(197,160,89,0.3)]"
+                  >
+                    <Sparkles size={12} /> Generate Script
+                  </button>
                 </div>
               )}
             </div>
