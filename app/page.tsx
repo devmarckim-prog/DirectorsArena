@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, Clapperboard } from "lucide-react";
 
 export default function LandingPage() {
@@ -62,20 +63,21 @@ export default function LandingPage() {
         </div>
 
         {/* 3. CTA GATEWAY */}
-        <motion.button 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2, duration: 1 }}
-          onClick={() => router.push("/project-list")}
-          className="group relative flex items-center space-x-8 bg-white/5 backdrop-blur-3xl border border-brand-gold/30 px-12 py-6 rounded-full hover:bg-brand-gold/10 hover:border-brand-gold/60 hover:shadow-[0_0_50px_rgba(197,160,89,0.3)] transition-all duration-700"
-        >
-          <span className="text-brand-gold text-base font-black uppercase tracking-[0.4em] ml-4">
-            무료로 작가되어보기
-          </span>
-          <div className="w-12 h-12 rounded-full bg-brand-gold/20 flex items-center justify-center group-hover:bg-brand-gold transition-all duration-700">
-            <ArrowRight size={22} className="text-brand-gold group-hover:text-black transition-colors" />
-          </div>
-        </motion.button>
+        <Link href="/project-list">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 2, duration: 1 }}
+            className="group relative flex items-center space-x-8 bg-white/5 backdrop-blur-3xl border border-brand-gold/30 px-12 py-6 rounded-full hover:bg-brand-gold/10 hover:border-brand-gold/60 hover:shadow-[0_0_50px_rgba(197,160,89,0.3)] transition-all duration-700 cursor-pointer"
+          >
+            <span className="text-brand-gold text-base font-black uppercase tracking-[0.4em] ml-4">
+              무료로 작가되어보기
+            </span>
+            <div className="w-12 h-12 rounded-full bg-brand-gold/20 flex items-center justify-center group-hover:bg-brand-gold transition-all duration-700">
+              <ArrowRight size={22} className="text-brand-gold group-hover:text-black transition-colors" />
+            </div>
+          </motion.div>
+        </Link>
       </motion.div>
 
       {/* Decorative Branding (Bottom Corners) */}
