@@ -16,8 +16,9 @@ const CompsOutputSchema = z.object({
     vote_average: z.number().optional().describe("Average rating out of 10."),
     release_date: z.string().optional().describe("Release year or full date."),
     genres: z.array(z.string()).optional().describe("Main genres of the work."),
-    media_type: z.enum(["movie", "tv"]).optional().describe("Specifies if it is a movie or a TV show.")
-  })).min(1).describe("Generate 3 to 5 similar contents/comps.")
+    media_type: z.enum(["movie", "tv"]).optional().describe("Specifies if it is a movie or a TV show."),
+    original_title: z.string().optional().describe("The original English title for better search accuracy.")
+  })).min(1).describe("Generate a diverse list of 12 to 16 genuinely similar contents.")
 });
 
 export async function POST(
@@ -34,8 +35,13 @@ export async function POST(
       .limit(1)
       .single();
 
-    const modelId = adminSettings?.model_id_fast || 'claude-3-5-haiku-20241022';
-    const systemPrompt = adminSettings?.prompt_similar_content || 'You are an elite showrunner. Recommend 3 to 5 similar contents.';
+    const modelId = adminSettings?.model_id_fast || 'claude-3-5-sonnet-latest';
+    const systemPrompt = adminSettings?.prompt_similar_content || `You are an elite cinematic strategist and showrunner. 
+    Analyze the provided project context and identify 12-16 existing movies or TV shows that share a deep "Cinematic Genome" with this project.
+    Look beyond surface-level genre; focus on:
+    1. Narrative Stakes: Similar conflict patterns or emotional arcs.
+    2. Visual/Tonal Identity: Mood, color palette, or cinematic style.
+    3. Archetypal Synergy: Character types and relationship dynamics.`;
 
     // 2. Fetch Project Context
     const { data: project } = await supabase
@@ -60,24 +66,23 @@ export async function POST(
     }
 
     const userPrompt = `
-Here is the project data:
+Here is the project data for analysis:
 Title: ${project.title || 'Untitled'}${englishTitle ? ` (${englishTitle})` : ''}
 Genre: ${project.genre}
 World Setting: ${project.world}
 Logline: ${project.logline}
-Story Synopsis: ${epicNarrative ? epicNarrative.substring(0, 800) : '(No synopsis yet)'}
+Story Synopsis Summary: ${epicNarrative ? epicNarrative.substring(0, 1200) : '(No synopsis yet)'}
 
-Based on the GENRE, WORLD SETTING, and STORY SYNOPSIS above, recommend 3-5 GENUINELY SIMILAR existing movies or TV shows.
-Focus on thematic, tonal, and narrative similarity — not just genre.
+Based on the metadata above, provide exactly 12-16 recommendations. 
+Ensure a mix of Global (Hollywood) and Korean contents if applicable.
 `;
-
 
     // 3. AI Generation
     const { object, usage } = await generateObject({
       model: anthropic(modelId),
       schema: CompsOutputSchema,
       system: systemPrompt,
-      prompt: `${userPrompt}\n\nIMPORTANT: For each recommendation, provide an accurate 'title' that I can use to search TMDB. You do not need to provide exact IDs or poster paths, as I will search for them dynamically.`,
+      prompt: `${userPrompt}\n\nIMPORTANT: For each recommendation, provide an accurate 'original_title' (English) to ensure precise TMDB matching. Provide a unique and insightful 'similarity_reason'.`,
     });
 
     // Log Usage (v7.2 Telemetry)
@@ -97,18 +102,19 @@ Focus on thematic, tonal, and narrative similarity — not just genre.
 
     for (const comp of object.contents) {
       let tmdbData: any = null;
+      const searchQuery = comp.original_title || comp.title;
       
-      if (tmdbKey) {
+      if (tmdbKey && searchQuery) {
         try {
           const searchRes = await fetch(
-            `https://api.themoviedb.org/3/search/multi?api_key=${tmdbKey}&query=${encodeURIComponent(comp.title)}&include_adult=false&language=ko-KR`
+            `https://api.themoviedb.org/3/search/multi?api_key=${tmdbKey}&query=${encodeURIComponent(searchQuery)}&include_adult=false&language=ko-KR`
           );
           const searchJson = await searchRes.json();
           if (searchJson.results && searchJson.results.length > 0) {
             tmdbData = searchJson.results[0]; // Take top match
           }
         } catch (e) {
-          console.error(`[API] TMDB Search Error for "${comp.title}":`, e);
+          console.error(`[API] TMDB Search Error for "${searchQuery}":`, e);
         }
       }
 
