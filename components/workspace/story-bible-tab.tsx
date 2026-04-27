@@ -1,4 +1,6 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+// components/workspace/story-bible-tab.tsx
+
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { Loader2, User, RefreshCcw, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CharacterNarrativeCard } from "./character-narrative-card";
@@ -48,7 +50,6 @@ export function StoryBibleTab({
 
   const majorCharacters = useMemo(() => {
     const highImportance = characters.filter(c => (c.importance || 0) >= 7);
-    // Fallback: If no high importance characters, take first 5 characters
     return (highImportance.length > 0 ? highImportance : characters.slice(0, 6)).slice(0, 8);
   }, [characters]);
 
@@ -65,28 +66,44 @@ export function StoryBibleTab({
     }
   }, [activeIndex, characters.length]);
 
-  // When a nexus node is selected, sync the carousel to that character
-  const handleNexusSelect = (id: string | null) => {
+  // ✅ 카드 클릭 시 관계도(Graph)와 동시 연동을 위한 핸들러
+  const handleCardSelect = useCallback((id: string, idx: number) => {
+    setActiveIndex(idx);
     setNexusSelectedId(id);
+  }, []);
+
+  // ✅ 전문가 제안: ID가 없으면 이름으로라도 찾도록 로직 강화 및 중앙 정렬 스크롤
+  const handleNexusSelect = useCallback((id: string | null) => {
+    setNexusSelectedId(id); // 관계도 선택 상태 동기화
     if (!id) return;
-    const idx = characters.findIndex((c) => c.id === id);
-    if (idx !== -1) {
-      setActiveIndex(idx);
-      // Double check scroll sync with a small delay
-      setTimeout(() => {
-        if (carouselRef.current) {
-          const cards = carouselRef.current.querySelectorAll('[data-character-card]');
-          const targetCard = cards[idx] as HTMLElement;
-          if (targetCard) {
-            carouselRef.current.scrollTo({
-              left: targetCard.offsetLeft - (carouselRef.current.offsetWidth / 2) + (targetCard.offsetWidth / 2),
-              behavior: 'smooth'
-            });
-          }
-        }
-      }, 150);
+    
+    // ID 필드가 없으면 이름 필드로라도 대조하여 인덱스 추출
+    const idx = characters.findIndex((c) => 
+      String(c.id ?? c.name) === String(id)
+    );
+    
+    if (idx === -1) {
+      console.warn(`[NexusSelect] '${id}' 인물을 찾을 수 없습니다.`);
+      return;
     }
-  };
+    
+    setActiveIndex(idx);
+    
+    setTimeout(() => {
+      if (carouselRef.current) {
+        const cards = carouselRef.current.querySelectorAll('[data-character-card]');
+        const targetCard = cards[idx] as HTMLElement;
+        
+        if (targetCard) {
+          // 캐러셀 내의 정확한 중앙 정렬 계산
+          carouselRef.current.scrollTo({
+            left: targetCard.offsetLeft - (carouselRef.current.offsetWidth / 2) + (targetCard.offsetWidth / 2),
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 100);
+  }, [characters]);
 
   return (
     <div className="space-y-12 pt-16 lg:pt-20">
@@ -94,34 +111,85 @@ export function StoryBibleTab({
         <div className="lg:col-span-6 flex flex-col">
           <div className="max-h-[800px] overflow-y-auto pr-8 custom-scrollbar-slim relative">
             <div className="space-y-8 pb-6">
-              {/* Unified Narrative Rendering */}
+              {/* Narrative Content */}
               {(() => {
                 const rawEpic = metadata?.story?.epicNarrative || metadata?.synopsis;
                 let epicNarrative = typeof rawEpic === 'string' ? rawEpic : (rawEpic ? JSON.stringify(rawEpic) : null);
                 
-                if (typeof epicNarrative === 'string' && epicNarrative.trim().startsWith('{')) {
-                  try {
-                    const nested = JSON.parse(epicNarrative);
-                    epicNarrative = nested.synopsis || nested.story?.epicNarrative || nested.epicNarrative || epicNarrative;
-                  } catch { /* ignore */ }
+                if (typeof epicNarrative === 'string') {
+                  if (epicNarrative.trim().startsWith('{')) {
+                    try {
+                      const nested = JSON.parse(epicNarrative);
+                      epicNarrative = nested.synopsis || nested.story?.epicNarrative || nested.epicNarrative || nested.epicNarrativeText || epicNarrative;
+                    } catch { /* ignore */ }
+                  }
+                  if (typeof epicNarrative === 'string' && epicNarrative.includes('"logline":')) {
+                    const loglineMatch = epicNarrative.match(/"logline":\s*"([^"]+)"/);
+                    if (loglineMatch) epicNarrative = loglineMatch[1];
+                  }
+                  if (typeof epicNarrative === 'string') {
+                    epicNarrative = epicNarrative.replace(/[{}"]/g, '').replace(/\\n/g, '\n').trim();
+                  }
                 }
 
+                // ✅ 인물명 감지 및 스팬 래핑 함수
+                const parseNarrativeWithCharacters = (text: string, chars: Character[]) => {
+                  if (!text || !chars.length) return [{ type: 'text', content: text, id: '' }];
+                  const sorted = [...chars].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
+                  const parts: { type: 'text' | 'character'; content: string; id: string }[] = [];
+                  let remaining = text;
+
+                  while (remaining.length > 0) {
+                    let matched = false;
+                    for (const char of sorted) {
+                      const idx = remaining.indexOf(char.name);
+                      if (idx === 0) {
+                        parts.push({ type: 'character', content: char.name, id: char.id ?? char.name });
+                        remaining = remaining.slice(char.name.length);
+                        matched = true;
+                        break;
+                      } else if (idx > 0) {
+                        parts.push({ type: 'text', content: remaining.slice(0, idx), id: '' });
+                        remaining = remaining.slice(idx);
+                        matched = true;
+                        break;
+                      }
+                    }
+                    if (!matched) {
+                      parts.push({ type: 'text', content: remaining, id: '' });
+                      break;
+                    }
+                  }
+                  return parts;
+                };
+
                 const plainSynopsis = typeof project.synopsis === 'string' && !project.synopsis.trim().startsWith('{') ? project.synopsis : null;
-                const narrativeText = epicNarrative || plainSynopsis;
+                const narrativeText = (typeof epicNarrative === 'string' && epicNarrative.length > 10) ? epicNarrative : (plainSynopsis || epicNarrative);
                 const logline = metadata?.story?.logline || metadata?.logline || project.logline || '';
                 
                 if (narrativeText) {
+                  const parts = parseNarrativeWithCharacters(narrativeText, characters);
                   return (
                     <div className="flex gap-6 group">
                       <div className="w-[3px] h-auto bg-brand-gold shrink-0" />
                       <div className="flex flex-col">
                         {logline && (
-                          <p className="font-cinematic-serif text-[24px] leading-snug tracking-tight mb-4 opacity-90">
+                          <p className="font-handwritten text-[32px] leading-snug tracking-tight mb-4 opacity-95 italic">
                             "{logline}"
                           </p>
                         )}
                         <div className="text-[18px] text-text-secondary leading-[1.8] max-w-[65ch] whitespace-pre-wrap font-sans">
-                          {narrativeText}
+                          {parts.map((p, i) => (
+                            p.type === 'character' ? (
+                              <span 
+                                key={i} 
+                                onClick={() => handleNexusSelect(p.id)}
+                                className="text-brand-gold font-bold cursor-pointer hover:underline underline-offset-4 decoration-brand-gold/30"
+                              >
+                                {p.content}
+                              </span>
+                            ) : p.content
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -140,29 +208,10 @@ export function StoryBibleTab({
                   </div>
                 );
               })()}
-
-              {/* UNIVERSAL DEV PULSE BAR */}
-              {(project.status === 'BAKING' || isStreaming) && (
-                 <motion.div 
-                   initial={{ opacity: 0, y: 10 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   className="mt-8 pt-8 border-t border-white/5 space-y-5"
-                 >
-                    <div className="flex items-center justify-between">
-                       <div className="flex flex-col gap-1 text-left">
-                          <span className="text-[10px] font-black text-brand-gold uppercase tracking-[0.3em] opacity-40">Heartbeat Insight</span>
-                          <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                            <Sparkles size={12} className="text-brand-gold animate-pulse" />
-                            OMA v6.3 Narrative Pulse
-                          </h4>
-                       </div>
-                    </div>
-                 </motion.div>
-              )}
             </div>
           </div>
 
-          {/* NARRATIVE CONFLICT DIMENSIONS (Wide/Long Cards) */}
+          {/* Conflict Dimensions */}
           <div className="space-y-4 pt-12 border-t border-white/5">
             <h3 className="text-[10px] font-black text-brand-gold uppercase tracking-[0.4em] opacity-30 mb-4">Conflict Dimensions</h3>
             <div className="space-y-3">
@@ -179,7 +228,7 @@ export function StoryBibleTab({
             </div>
           </div>
 
-          {/* SIMPLIFIED AI RECONSTRUCTION CHAT */}
+          {/* AI Chat Area */}
           <div className="mt-12 p-1 bg-white/[0.03] border border-white/10 rounded-[24px] focus-within:border-brand-gold/30 transition-all">
             <div className="flex items-center gap-4 px-6 py-4">
               <textarea 
@@ -189,10 +238,7 @@ export function StoryBibleTab({
                 className="flex-1 bg-transparent border-none text-text-primary text-[16px] leading-relaxed placeholder:text-text-tertiary/40 resize-none outline-none min-h-[44px] py-2 font-sans"
               />
               <button 
-                onClick={() => {
-                  onRegenerate(steerPrompt);
-                  setSteerPrompt("");
-                }}
+                onClick={() => { onRegenerate(steerPrompt); setSteerPrompt(""); }}
                 disabled={isStreaming}
                 className="shrink-0 w-12 h-12 bg-brand-gold text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
               >
@@ -204,14 +250,10 @@ export function StoryBibleTab({
 
         <div className="lg:col-span-6 flex flex-col gap-y-[40px]">
           <div className="sticky top-24 space-y-[40px] w-full">
-            <NexusGraph
-              characters={majorCharacters}
-              selectedId={nexusSelectedId}
-              onSelectId={handleNexusSelect}
-            />
-
             <div className="space-y-6">
-              <h3 className="text-[10px] font-black text-brand-gold uppercase tracking-[0.5em] opacity-80">Character Roster</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-black text-brand-gold uppercase tracking-[0.5em] opacity-80">Character Roster</h3>
+              </div>
               <div className="relative">
                 <div ref={carouselRef} className="flex gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory px-1 pb-4">
                   {characters.length > 0 ? characters.map((char, idx) => (
@@ -221,24 +263,23 @@ export function StoryBibleTab({
                       isActive={activeIndex === idx} 
                       onUpdate={(updates) => onUpdateCharacter(char.id, updates)} 
                       onEditFullMode={() => setEditingCharId(char.id)} 
-                      onSelect={() => setActiveIndex(idx)} 
+                      onSelect={() => handleCardSelect(char.id || char.name, idx)} 
                     />
                   )) : <div className="w-full py-10 text-center text-white/10 uppercase text-[10px] font-black border border-dashed border-white/5 rounded-3xl">등장인물 분석 중...</div>}
                 </div>
                 <div className="flex justify-center gap-2 mt-4">
                   {characters.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveIndex(i)}
-                      className={cn(
-                        "h-1.5 rounded-full transition-all duration-500 cursor-pointer hover:opacity-100",
-                        activeIndex === i ? "w-10 bg-brand-gold" : "w-2.5 bg-white/10 hover:bg-white/30"
-                      )}
-                    />
+                    <button key={i} onClick={() => setActiveIndex(i)} className={cn("h-1.5 rounded-full transition-all duration-500 cursor-pointer hover:opacity-100", activeIndex === i ? "w-10 bg-brand-gold" : "w-2.5 bg-white/10 hover:bg-white/30")} />
                   ))}
                 </div>
               </div>
             </div>
+
+            <NexusGraph
+              characters={majorCharacters}
+              onSelectId={handleNexusSelect}
+              selectedId={nexusSelectedId}
+            />
           </div>
         </div>
       </div>

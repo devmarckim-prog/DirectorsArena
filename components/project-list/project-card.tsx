@@ -6,7 +6,7 @@ import {
   Trash2, Edit3, 
   PlayCircle, User, ArrowUpRight, Droplet, Sparkles
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -50,6 +50,7 @@ export function ProjectCard({
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [displayProgress, setDisplayProgress] = useState(project.progress || 0);
   const router = useRouter();
   
   const meta = useMemo(() => {
@@ -107,6 +108,28 @@ export function ProjectCard({
       onDelete(project.id);
     }
   };
+
+  // v9.1: Incremental Progress Logic
+  useEffect(() => {
+    if (!isBaking || displayProgress >= 100) return;
+    
+    const interval = setInterval(() => {
+      setDisplayProgress(prev => {
+        // Increment slowly, but sync with real progress if real is higher
+        const next = prev + (Math.random() * 0.5);
+        return Math.max(next, project.progress);
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isBaking, project.progress, displayProgress]);
+
+  // Sync with real progress if real progress jumps ahead
+  useEffect(() => {
+    if (project.progress > displayProgress) {
+        setDisplayProgress(project.progress);
+    }
+  }, [project.progress]);
 
   return (
     <>
@@ -175,58 +198,55 @@ export function ProjectCard({
              </div>
     
              {isBaking && (
-                <div className="absolute inset-x-0 bottom-0 top-[185px] flex flex-col items-center justify-center p-4 z-10 bg-black/60 backdrop-blur-md px-6">
-                   <div className="text-center relative z-10 w-full mb-2">
+                <div className="absolute inset-0 z-10 pointer-events-none">
+                   {/* Top area for progress - moved from bottom */}
+                   <div className="absolute top-[80px] left-0 right-0 flex flex-col items-center justify-center p-4">
                       <motion.p 
                         animate={{ opacity: [0.4, 1, 0.4] }}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className="text-[9px] font-black text-brand-gold uppercase tracking-[0.4em] mb-2"
+                        className="text-[9px] font-black text-brand-gold uppercase tracking-[0.4em] mb-3"
                       >
-                        {project.status === 'ERROR' ? "GENERATION ERROR" : (project.progress <= 10 ? "ENGINE IGNITION" : "BAKING")}
+                        {project.status === 'ERROR' ? "GENERATION ERROR" : (displayProgress <= 15 ? "ENGINE IGNITION" : "BAKING NARRATIVE")}
                       </motion.p>
-                      <p className={cn(
-                        "text-3xl font-black text-white tabular-nums tracking-tighter",
+                      
+                      <div className="relative w-48 h-1.5 bg-white/10 rounded-full overflow-hidden mb-3 border border-white/5">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${displayProgress}%` }}
+                          className="absolute inset-y-0 left-0 bg-brand-gold shadow-[0_0_10px_rgba(197,159,89,0.5)]"
+                        />
+                      </div>
+
+                       <p className={cn(
+                        "text-2xl font-black text-white tabular-nums tracking-tighter opacity-80",
                         isLocked && "animate-pulse"
                       )}>
-                        {Math.round(project.progress)}%
+                        {Math.round(displayProgress)}%
                       </p>
                     </div>
 
-                    {/* DEV MODE INSIGHTS (v6.1) */}
-                    <div className="w-full mt-4 bg-white/5 border border-white/10 rounded-lg p-2.5 space-y-1.5 overflow-hidden">
-                       <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-widest">
-                          <span className="text-white/40">Dev Insight</span>
-                          <span className="text-brand-gold/60">OMA v6.1 Pulse</span>
-                       </div>
-                       <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                             <div className={cn("w-1 h-1 rounded-full", project.progress >= 10 ? "bg-green-500 animate-pulse" : "bg-white/20")} />
-                             <span className={cn("text-[8px] font-bold", project.progress >= 10 ? "text-white" : "text-white/20")}>Phase 1: API Handshake</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                             <div className={cn("w-1 h-1 rounded-full", project.progress > 10 ? "bg-green-500 animate-pulse" : "bg-white/20")} />
-                             <span className={cn("text-[8px] font-bold", project.progress > 10 ? "text-white" : "text-white/20")}>Phase 2: Narrative Stream</span>
-                          </div>
-                       </div>
-                       <p className="text-[7px] text-white/20 font-mono tracking-tighter truncate">
-                          ID: {project.id} | Protocol: RAW_VIBE_v6.1
-                       </p>
-                    </div>
-
-                    {isLocked && (
-                      <div className="mt-4 flex flex-col items-center space-y-2">
-                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest text-center">
-                          Terminal Access Locked
-                        </p>
-                        <button 
-                          onClick={handleDelete}
-                          className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-red-500/20 text-white/20 hover:text-red-500 transition-all border border-white/5 hover:border-red-500/20 mt-2"
-                        >
-                          <Trash2 size={12} />
-                          <span className="text-[8px] font-black uppercase tracking-widest">Abandon Project</span>
-                        </button>
+                    {/* Bottom area - Title matched to completed state */}
+                    <div className="absolute top-[210px] left-0 right-0 p-5 pt-3.5 flex flex-col space-y-2.5">
+                       <h3 className="text-[18px] font-bold text-white/40 tracking-tight leading-tight line-clamp-1 italic">
+                        {displayTitle.replace(/\s*[(\uFF08].*?[)\uFF09]\s*/g, "").trim()}
+                      </h3>
+                      <div className="flex items-center space-x-2 text-[9px] text-neutral-500 font-medium">
+                        <span className="opacity-20 tracking-tighter uppercase">Initializing Core Protocol...</span>
                       </div>
-                    )}
+
+                      {/* Abandon Project Button */}
+                      {isLocked && (
+                        <div className="pt-4 flex flex-col items-center">
+                          <button 
+                            onClick={handleDelete}
+                            className="pointer-events-auto flex items-center space-x-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-red-500/20 text-white/20 hover:text-red-500 transition-all border border-white/5 hover:border-red-500/20 mt-2"
+                          >
+                            <Trash2 size={12} />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Abandon Project</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                 </div>
              )}
     
@@ -236,10 +256,10 @@ export function ProjectCard({
                      <div className="flex items-start justify-between">
                         <div className="flex flex-col space-y-1">
                           <h3 className="text-[18px] font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-brand-gold transition-colors">
-                            {displayTitle.replace(/\s*\(.*?\)\s*/g, "").trim()}
+                            {displayTitle.replace(/\s*[(\uFF08].*?[)\uFF09]\s*/g, "").trim()}
                           </h3>
                           {(() => {
-                            const enTitle = meta?.title_en || meta?.story?.title_en || displayTitle.match(/\((.*?)\)/)?.[1];
+                            const enTitle = meta?.title_en || meta?.story?.title_en || displayTitle.match(/[(\uFF08](.*?)[)\uFF09]/)?.[1];
                             if (!enTitle) return null;
                             return (
                               <span className="text-[10px] font-medium text-white/30 uppercase tracking-[0.2em] line-clamp-1">

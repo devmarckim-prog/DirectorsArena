@@ -66,6 +66,7 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
 
   return (
     <div
+      id={`char-card-${character.id}`}
       data-character-card
       onClick={() => { if (!isActive) onSelect(); }}
       className={cn(

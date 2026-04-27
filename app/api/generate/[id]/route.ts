@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import { createClient } from '@supabase/supabase-js';
 import { persistProjectGeneration } from '@/lib/repository/generation';
+import { safeJSONParse } from '@/lib/utils/ai-parser';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -102,11 +103,17 @@ ${adminSettings?.prompt_scenario_init || ''}`;
           }
 
           if (totalText) {
-            const cleanText = totalText.replace(/```json|```/g, "").trim();
             try {
-              const parsed = JSON.parse(cleanText);
-              await persistProjectGeneration(projectId, parsed);
-            } catch (pErr) {}
+              const parsed = safeJSONParse(totalText, null);
+              if (parsed) {
+                await persistProjectGeneration(projectId, parsed);
+                console.log(`[OMA] Project ${projectId} persisted via Safety Harness.`);
+              } else {
+                throw new Error("Final parse result is null");
+              }
+            } catch (pErr) {
+              console.error("[OMA] Final persistence failed:", pErr);
+            }
           }
         } finally {
           controller.close();

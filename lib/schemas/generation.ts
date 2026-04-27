@@ -10,17 +10,24 @@ import { z } from 'zod';
  * gender/ageGroup used for avatar mapping
  */
 export const CharacterOutputSchema = z.object({
+  id: z.string().describe("Character's unique ID. Format: lowercase letters + underscores only (e.g., 'park_min_gyu'). ABSOLUTELY REQUIRED and must be unique within the project."),
   name: z.string().describe("Character's full name"),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]).describe("Character gender for avatar mapping"),
+  age: z.number().describe("Specific age (나이)"),
   ageGroup: z.enum(["TEEN", "20S", "30S", "40S", "50S_PLUS"]).describe("Age bracket for avatar mapping"),
   role: z.string().describe("Narrative role, e.g. 주인공, 안타고니스트, 조력자, 배신자"),
-  description: z.string().describe("2-3 sentence character description including appearance and personality"),
+  job: z.string().describe("Character's specific occupation or role in society (직업)"),
+  desire: z.string().describe("Character's core desire, motivation, or inner goal (욕구)"),
+  description: z.string().describe("2-3 sentence character description including appearance (look) and personality"),
+  traits: z.array(z.string()).describe("3-4 key character traits or keywords"),
   relationshipToProtagonist: z.string().describe("How this character relates to the protagonist"),
   groups: z.array(z.string()).describe("1-2 affiliations or thematic groups (e.g., 'Action School', 'Corporate Team', 'Rivals')"),
   relations: z.array(z.object({
     target: z.string().describe("Name of the target character"),
-    type: z.string().describe("Type of relationship (e.g., 'Ally', 'Conflict', 'Romance', 'Secret')")
-  })).describe("All-to-all relationships between characters in this project"),
+    type: z.string().describe("Type of relationship (e.g., 'Ally', 'Conflict', 'Romance', 'Secret')"),
+    description: z.string().describe("Brief 1-sentence context of the relationship"),
+    strength: z.number().min(1).max(10).describe("Strength of the relationship (1-10)")
+  })).describe("Detailed all-to-all relationships between characters in this project. Essential for the relationship graph."),
 });
 
 /**
@@ -57,7 +64,7 @@ export const ProjectGenerationSchema = z.object({
   logline: z.string().describe("One compelling sentence that sells the entire story"),
   synopsis: z.string().describe("A rich, detailed synopsis of approximately 700 characters"),
   characters: z.array(CharacterOutputSchema).describe(
-    "4-6 richly detailed characters that bring the narrative to life"
+    "5-8 richly detailed characters that bring the narrative to life"
   ),
   structure: z.array(StoryBeatOutputSchema).describe(
     "8-10 key narrative beats following the 3-act structure (Navigator)"

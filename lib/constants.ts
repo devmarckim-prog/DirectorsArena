@@ -104,14 +104,14 @@ export const ELITE_SAMPLES = [
         ]
       },
       characters: [
-        { name: "조재현", role: "제작사 공동대표", trait: "사업 PD 출신의 워커홀릭. '작품은 영혼이다'라고 믿는 예술가적 경영자.", relationship_type: "Protagonist", groups: ["Directors Arena", "The Arena"], relations: [{ target: "오서영", type: "Ally" }, { target: "강동욱", type: "Conflict" }, { target: "최정훈", type: "Conflict" }] },
-        { name: "오서영", role: "제작사 공동대표", trait: "샐리 스토리 대표 출신. 업계 최고의 PPL 퀸이자 냉철한 데이터 분석가.", relationship_type: "Protagonist", groups: ["Directors Arena", "The Arena"], relations: [{ target: "조재현", type: "Ally" }, { target: "한유리", type: "Ally" }] },
-        { name: "김병수", role: "전략 컨설턴트", trait: "플랫폼 생태계의 포식자. 재현과 서영을 연결해주었으나 속내를 알 수 없는 인물.", relationship_type: "Mystery", groups: ["The Oracle", "Independent"], relations: [{ target: "조재현", type: "Ally" }, { target: "오서영", type: "Ally" }] },
-        { name: "강동욱", role: "tvN 편성 CP", trait: "편성의 키를 쥔 자. 까다롭고 보수적이지만 실력이 있다면 기회를 주는 인물.", relationship_type: "Conflict", groups: ["tvN Platform", "The Gatekeepers"], relations: [{ target: "조재현", type: "Conflict" }] },
-        { name: "이혜인", role: "메인 연출 PD", trait: "숏폼 장르의 개척자. 섬세한 감각과 빠른 판단력을 가진 실력파 감독.", relationship_type: "Ally", groups: ["Directors Arena"], relations: [{ target: "조재현", type: "Ally" }] },
-        { name: "박민규", role: "오디션 참가자", trait: "천재적인 재능을 가졌으나 통제 불능인 트러블 메이커이자 화제성의 중심.", relationship_type: "Ally", groups: ["Talent Pool", "The Arena"], relations: [{ target: "조재현", type: "Ally" }] },
-        { name: "한유리", role: "제작 실장", trait: "서영의 오랜 오른팔. 산전수전 다 겪은 살림꾼이자 프로젝트의 윤활유.", relationship_type: "Ally", groups: ["Directors Arena"], relations: [{ target: "오서영", type: "Ally" }] },
-        { name: "최정훈", role: "대형 기획사 본부장", trait: "재현의 시크릿 라이벌. 사사건건 '디렉터즈 아레나'의 편성을 방해하는 악역.", relationship_type: "Conflict", groups: ["Rival Production", "The Gatekeepers"], relations: [{ target: "조재현", type: "Conflict" }] }
+        { id: "cho_jae_hyun", name: "조재현", role: "제작사 공동대표", gender: "MALE", age: 38, trait: "사업 PD 출신의 워커홀릭. '작품은 영혼이다'라고 믿는 예술가적 경영자.", relationship_type: "Protagonist", groups: ["Directors Arena", "The Arena"], relations: [{ target: "오서영", type: "Ally" }, { target: "강동욱", type: "Conflict" }, { target: "최정훈", type: "Conflict" }] },
+        { id: "oh_seo_young", name: "오서영", role: "제작사 공동대표", gender: "FEMALE", age: 34, trait: "샐리 스토리 대표 출신. 업계 최고의 PPL 퀸이자 냉철한 데이터 분석가.", relationship_type: "Protagonist", groups: ["Directors Arena", "The Arena"], relations: [{ target: "조재현", type: "Ally" }, { target: "한유리", type: "Ally" }] },
+        { id: "kim_byung_soo", name: "김병수", role: "전략 컨설턴트", gender: "MALE", age: 42, trait: "플랫폼 생태계의 포식자. 재현과 서영을 연결해주었으나 속내를 알 수 없는 인물.", relationship_type: "Mystery", groups: ["The Oracle", "Independent"], relations: [{ target: "조재현", type: "Ally" }, { target: "오서영", type: "Ally" }] },
+        { id: "kang_dong_wook", name: "강동욱", role: "tvN 편성 CP", gender: "MALE", age: 48, trait: "편성의 키를 쥔 자. 까다롭고 보수적이지만 실력이 있다면 기회를 주는 인물.", relationship_type: "Conflict", groups: ["tvN Platform", "The Gatekeepers"], relations: [{ target: "조재현", type: "Conflict" }] },
+        { id: "lee_hye_in", name: "이혜인", role: "메인 연출 PD", gender: "FEMALE", age: 29, trait: "숏폼 장르의 개척자. 섬세한 감각과 빠른 판단력을 가진 실력파 감독.", relationship_type: "Ally", groups: ["Directors Arena"], relations: [{ target: "조재현", type: "Ally" }] },
+        { id: "park_min_gyu", name: "박민규", role: "오디션 참가자", gender: "MALE", age: 27, trait: "천재적인 재능을 가졌으나 통제 불능인 트러블 메이커이자 화제성의 중심.", relationship_type: "Ally", groups: ["Talent Pool", "The Arena"], relations: [{ target: "조재현", type: "Ally" }] },
+        { id: "han_yu_ri", name: "한유리", role: "제작 실장", gender: "FEMALE", age: 31, trait: "서영의 오랜 오른팔. 산전수전 다 겪은 살림꾼이자 프로젝트의 윤활유.", relationship_type: "Ally", groups: ["Directors Arena"], relations: [{ target: "오서영", type: "Ally" }] },
+        { id: "choi_jung_hoon", name: "최정훈", role: "대형 기획사 본부장", gender: "MALE", age: 45, trait: "재현의 시크릿 라이벌. 사사건건 '디렉터즈 아레나'의 편성을 방해하는 악역.", relationship_type: "Conflict", groups: ["Rival Production", "The Gatekeepers"], relations: [{ target: "조재현", type: "Conflict" }] }
       ],
       beats: [
         { act_number: 1, beat_type: "Opening Image", title: "야심의 조우", description: "강남의 한 카페. 조재현과 오서영이 김병수와 만난다.", timestamp_label: "00:05:00" },

@@ -87,11 +87,26 @@ export async function triggerRegenerateAction(projectId: string, prompt: string 
   try {
     const supabase = createAdminClient();
     
+    // v9.2: Gather current character context to ensure edited info is preserved in regeneration
+    const { data: existingChars } = await supabase
+      .from('characters_v2')
+      .select('name, age, job, look, gender, traits, desire')
+      .eq('project_id', projectId);
+
+    let contextAugmentation = "";
+    if (existingChars && existingChars.length > 0) {
+      contextAugmentation = "\n\n[기존 캐릭터 유지 및 수정 사항]\n" + existingChars.map(c => 
+        `- ${c.name}: ${c.age}세, ${c.job}, 특징: ${c.look}, 성격: ${c.traits}, 욕망: ${c.desire}`
+      ).join("\n");
+    }
+
+    const finalSteerPrompt = prompt + contextAugmentation;
+
     // v8.6: Persist steer prompt for the ignite engine
     await supabase.from('projects_v2').update({ 
       status: 'BAKING', 
       progress: 0,
-      steer_prompt: prompt 
+      steer_prompt: finalSteerPrompt 
     }).eq('id', projectId);
 
     await Promise.all([

@@ -1,52 +1,56 @@
-"use client";
+// components/workspace/nexus-faction-zone.tsx
 
-import { motion } from "framer-motion";
-import type { NexusFaction, FactionPosition } from "./nexus-types";
+import { motion } from 'framer-motion';
+import { NexusFaction } from './nexus-types';
+import { AntigravityLayoutEngine } from './nexus-layout';
 
-interface FactionZoneProps {
+interface NexusFactionZoneProps {
   faction: NexusFaction;
-  isHighlighted?: boolean;
+  layoutEngine: AntigravityLayoutEngine;
 }
 
-const ZONE_RECTS: Record<FactionPosition, { x: number; y: number; w: number; h: number; lx: number; ly: number }> = {
-  left:   { x: 30,  y: 80,  w: 260, h: 440, lx: 160, ly: 62 },
-  right:  { x: 610, y: 80,  w: 260, h: 440, lx: 740, ly: 62 },
-  center: { x: 320, y: 140, w: 260, h: 320, lx: 450, ly: 124 },
-  bottom: { x: 210, y: 468, w: 480, h: 110, lx: 450, ly: 454 },
-};
-
-export function FactionZone({ faction, isHighlighted = false }: FactionZoneProps) {
-  const r = ZONE_RECTS[faction.position];
-  if (!r) return null;
-
+export function NexusFactionZone({ faction, layoutEngine }: NexusFactionZoneProps) {
+  const pathData = layoutEngine.getFactionZonePath(faction.position);
+  
+  // ✅ 라벨 위치 계산 (영역별 최적화)
+  const labelPositions: Record<string, { x: number, y: number }> = {
+    left: { x: 180, y: 40 },
+    right: { x: 1020, y: 40 },
+    top: { x: 600, y: 150 },
+    bottom: { x: 600, y: 540 }
+  };
+  
+  const labelPos = labelPositions[faction.position];
+  
   return (
     <g>
-      <motion.rect
-        x={r.x} y={r.y} width={r.w} height={r.h} rx={28}
-        fill={faction.color}
-        fillOpacity={isHighlighted ? 0.12 : 0.06}
-        stroke={faction.color}
-        strokeWidth={2}
-        strokeDasharray="10 5"
-        strokeOpacity={isHighlighted ? 0.65 : 0.35}
+      {/* ✅ 영역 배경 */}
+      <motion.path
+        d={pathData}
+        fill={`${faction.color}0A`}  // 4% 투명도
+        stroke={`${faction.color}4D`}  // 30% 투명도
+        strokeWidth="2"
+        strokeDasharray="12,6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.9 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
       />
+      
+      {/* ✅ 진영 라벨 */}
       <motion.text
-        x={r.lx} y={r.ly}
-        textAnchor="middle"
+        x={labelPos.x}
+        y={labelPos.y}
         fill={faction.color}
-        fontSize="12"
-        fontFamily="var(--font-mono)"
-        letterSpacing="6"
-        fontWeight="bold"
-        fillOpacity={isHighlighted ? 1 : 0.6}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.9, delay: 0.2 }}
+        fontSize="14"
+        fontWeight="600"
+        fontFamily="monospace"
+        textAnchor="middle"
+        letterSpacing="4"
+        initial={{ opacity: 0, y: labelPos.y - 10 }}
+        animate={{ opacity: 0.8, y: labelPos.y }}
+        transition={{ duration: 0.6, delay: 0.4 }}
       >
-        {faction.name.toUpperCase().split('').join(' ')}
+        {faction.name.replace(/_/g, ' ')}
       </motion.text>
     </g>
   );

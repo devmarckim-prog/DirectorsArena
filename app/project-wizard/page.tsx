@@ -15,6 +15,7 @@ export default function CreateProjectPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProducing, setIsProducing] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
   const [formData, setFormData] = useState({
     platform: "ott",
     genres: ["Noir"],
@@ -59,9 +60,11 @@ export default function CreateProjectPage() {
             if (value) {
                 console.log("[Wizard] First chunk received. Engine Ignited. Gate Open.");
                 // v8.4: Add intentional delay for DB propagation and UX
-                await new Promise(r => setTimeout(r, 1500));
-                // Immediately redirect to dashboard
-                router.push(`/project-list`);
+                await new Promise(r => setTimeout(r, 800));
+                
+                // v9.0: Show completion message instead of immediate redirect
+                setIsProducing(false);
+                setIsComplete(true);
             }
             reader.cancel();
         } else {
@@ -144,7 +147,6 @@ export default function CreateProjectPage() {
         </div>
       </main>
 
-      {/* v8.4: Improved Production Overlay with Korean Text and Blinking */}
       <AnimatePresence>
         {isProducing && (
           <motion.div
@@ -155,18 +157,52 @@ export default function CreateProjectPage() {
           >
             <motion.div
               animate={{ opacity: [0, 1, 0, 1] }}
-              transition={{ duration: 1.5, times: [0, 0.4, 0.6, 1], repeat: 0 }}
+              transition={{ duration: 1.5, times: [0, 0.4, 0.6, 1], repeat: Infinity }}
               className="text-center"
             >
               <div className="w-16 h-[1px] bg-brand-gold/30 mx-auto mb-6" />
-              <p className="text-[10px] font-black text-brand-gold uppercase tracking-[1em] mb-4">Finalizing Script Details</p>
+              <p className="text-[10px] font-black text-brand-gold uppercase tracking-[1em] mb-4">Engine Igniting</p>
               <motion.p 
                 animate={{ opacity: [1, 0.5, 1] }}
-                transition={{ duration: 0.75, repeat: 2 }}
+                transition={{ duration: 1.5, repeat: Infinity }}
                 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none px-4"
               >
                 당신의 대박 스토리가 생성되고 있습니다
               </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isComplete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 z-[400] flex flex-col items-center justify-center p-10 backdrop-blur-xl"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="max-w-md w-full bg-neutral-900 border border-brand-gold/30 rounded-[40px] p-12 text-center shadow-[0_0_100px_rgba(197,160,89,0.15)]"
+            >
+              <div className="w-20 h-20 bg-brand-gold rounded-full flex items-center justify-center mx-auto mb-10 shadow-[0_0_40px_rgba(197,160,89,0.4)]">
+                <Sparkles size={40} className="text-black" />
+              </div>
+              <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-4">
+                엔진 가동 성공!
+              </h2>
+              <p className="text-neutral-400 text-sm font-medium leading-relaxed mb-10">
+                당신의 새로운 서사가 백그라운드에서 생성되기 시작했습니다.<br/>
+                이제 프로젝트 목록에서 생성 과정을 실시간으로 확인할 수 있습니다.
+              </p>
+              <button
+                onClick={() => router.push('/project-list')}
+                className="w-full bg-brand-gold text-black py-5 rounded-full font-black uppercase tracking-[0.2em] text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
+              >
+                목록으로 이동하기
+              </button>
             </motion.div>
           </motion.div>
         )}

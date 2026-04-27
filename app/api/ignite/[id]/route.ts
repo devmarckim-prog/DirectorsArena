@@ -5,6 +5,8 @@ export const dynamic = 'force-dynamic';
 
 import { createClient } from '@supabase/supabase-js';
 import { persistProjectGeneration } from '@/lib/repository/generation';
+import { ProjectGenerationSchema } from '@/lib/schemas/generation';
+import { safeJSONParse } from '@/lib/utils/ai-parser';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,12 +54,20 @@ export async function POST(
     console.log("[OMA] Phase 2: Updating DB to 10% (IGNITION)");
     await supabase.from('projects_v2').update({ status: 'BAKING', progress: 10 }).eq('id', projectId);
 
-    const systemPrompt = `당신은 ${project.platform || 'Movie'} 작가이자 쇼러너입니다. 
-반드시 JSON 형식으로만 응답하세요. 다른 설명은 배제하십시오.
-ProjectGenerationSchema를 엄격히 준수하십시오.
-JSON keys: koreanTitle, englishTitle, logline, synopsis, characters (array of {name, gender, ageGroup, role, description, relationshipToProtagonist}), structure (array of {act_number, beat_type, title, description, timestamp_label}), episodes (array of {episodeNumber, title, summary, scriptContent}).
-Only include scriptContent for Episode 1.
+    const systemPrompt = `당신은 드라마/시나리오 분석 전문가입니다.
+대본이나 시나리오 설명을 입력받아, 등장인물을 JSON 배열로 추출하고 전체 프로젝트를 구성합니다.
 
+[출력 규칙]
+- 반드시 JSON 형식으로만 응답하세요. 다른 설명은 배제하십시오.
+- ProjectGenerationSchema를 엄격히 준수하십시오.
+
+[캐릭터 및 진영 필수 규칙]
+- "groups"는 절대 빈 배열이면 안 됩니다. 명시적 소속이 없으면 인물의 역할/입장을 기반으로 반드시 진영명을 추론하여 기입하십시오 (예: "경찰청", "범죄조직", "중립세력", "재벌가", "시민단체" 등).
+- 같은 세력 인물은 반드시 동일한 groups[0] 값을 공유해야 합니다.
+- 인물 간의 복잡한 관계망(All-to-All relations)을 상세히 기술하십시오. 단방향으로 기술하되(A→B만), 서사적 비중(strength: 1~10)과 관계 유형("ALLY" | "ENEMY" | "FAMILY" | "NEUTRAL")을 정확히 입력하십시오.
+
+JSON keys: koreanTitle, englishTitle, logline, synopsis, characters (array of {id, name, gender, age, ageGroup, role, job, desire, description, traits, relationshipToProtagonist, groups, relations}), structure, episodes.
+Only include scriptContent for Episode 1.
 ${adminSettings?.prompt_scenario_init || ''}`;
 
     const steerPrompt = project.steer_prompt || "";
@@ -175,10 +185,45 @@ ${adminSettings?.prompt_scenario_init || ''}`;
             let epicNarrative = "";
             let parsedSynopsisPayload = "";
 
+            // 1. Initial Parsing with Safety Harness
+            let aiData: any = null;
             try {
-              const aiData = JSON.parse(cleanText);
+              aiData = safeJSONParse(cleanText, null);
+              if (!aiData) throw new Error("JSON Parsing yielded null after repair attempts.");
+              
+              // 2. Schema Validation (Safe Parse)
+              const validation = ProjectGenerationSchema.safeParse(aiData);
+              
+              if (!validation.success) {
+                console.warn('[OMA] Validation issues detected. Attempting to heal structure...');
+                // Even if not perfectly valid, we try to use what we have
+                // Filling defaults for missing fields
+                aiData.characters = aiData.characters || [];
+                aiData.structure = aiData.structure || [];
+                aiData.episodes = aiData.episodes || [];
+              } else {
+                // Use the validated data which might have trimmed extra fields
+                aiData = validation.data;
+              }
+
               epicNarrative = aiData.synopsis || aiData.story?.epicNarrative || cleanText;
               finalTitle = aiData.koreanTitle || aiData.title || project.title;
+
+              // 3. Special Rescue: If characters are empty, check if they leaked into synopsis string
+              // (Specifically addresses the "Heart-aching" project issue)
+              if ((!aiData.characters || aiData.characters.length === 0) && cleanText.includes('"name":')) {
+                 console.log("[OMA] DETECTED LEAKED CHARACTERS. Attempting deep-tissue rescue...");
+                 // Basic regex extraction for common fields
+                 const leakedChars: any[] = [];
+                 const nameMatches = cleanText.match(/"name":\s*"([^"]+)"/g);
+                 if (nameMatches) {
+                    nameMatches.forEach((m, idx) => {
+                       const name = m.match(/"name":\s*"([^"]+)"/)?.[1];
+                       if (name) leakedChars.push({ name, gender: "OTHER", ageGroup: "30S", role: "Rescued", description: "Leaked in stream", relationshipToProtagonist: "N/A", groups: [], relations: [] });
+                    });
+                    aiData.characters = leakedChars;
+                 }
+              }
 
               // Also update the synopsis field for backward compatibility
               parsedSynopsisPayload = JSON.stringify({
@@ -193,26 +238,33 @@ ${adminSettings?.prompt_scenario_init || ''}`;
                 episodes: aiData.episodes || []
               });
 
-              console.log(`[OMA] JSON parsed. Title: ${finalTitle}`);
-            } catch {
-              console.warn('[OMA] AI response is not JSON. Saving as plain text.');
+              console.log(`[OMA] Safety Harness processed. Title: ${finalTitle}, Characters: ${aiData.characters?.length || 0}`);
+            } catch (err) {
+              console.error('[OMA] CRITICAL: Post-processing failed even with Safety Harness.', err);
               parsedSynopsisPayload = JSON.stringify({
                 story: { epicNarrative: cleanText, logline: project.logline || '' }
               });
             }
 
-            // Save to generated_content (JSONB) + synopsis (backward compat)
-            await supabase.from('projects_v2').update({
-              status: 'READY',
-              progress: 100,
-              title: finalTitle,
-              generated_content: {
-                epicNarrative,
-                generatedAt: new Date().toISOString(),
-                wordCount: epicNarrative.split(' ').length
-              },
-              ...(parsedSynopsisPayload ? { synopsis: parsedSynopsisPayload } : {})
-            }).eq('id', projectId);
+            // Save to sub-tables (Characters, Beats, Episodes) using repository
+            try {
+              await persistProjectGeneration(projectId, aiData);
+              console.log(`[OMA] Sub-tables persisted successfully for project: ${projectId}`);
+            } catch (pErr) {
+              console.error(`[OMA] Sub-table persistence failed:`, pErr);
+              // Fallback: Just update core project record if sub-tables fail
+              await supabase.from('projects_v2').update({
+                status: 'READY',
+                progress: 100,
+                title: finalTitle,
+                generated_content: {
+                  epicNarrative,
+                  generatedAt: new Date().toISOString(),
+                  wordCount: epicNarrative.split(' ').length
+                },
+                ...(parsedSynopsisPayload ? { synopsis: parsedSynopsisPayload } : {})
+              }).eq('id', projectId);
+            }
 
             // Signal 100% completion to browser
             controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify({ phase: 3, status: 'COMPLETE', progress: 100 })}\n`));

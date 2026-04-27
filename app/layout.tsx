@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Noto_Serif_KR } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Noto_Serif_KR, Nanum_Pen_Script } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -25,6 +25,12 @@ const notoSerif = Noto_Serif_KR({
   weight: ["400", "700", "900"],
 });
 
+const nanumPen = Nanum_Pen_Script({
+  variable: "--font-nanum-pen",
+  subsets: ["latin"],
+  weight: "400",
+});
+
 export const metadata: Metadata = {
   title: "Directors Arena | Cinematic Narrative Engine",
   description: "Experience the Void. Architect your vision.",
@@ -40,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body 
-        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${notoSerif.variable} antialiased selection:bg-brand-gold/30 selection:text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${notoSerif.variable} ${nanumPen.variable} antialiased selection:bg-brand-gold/30 selection:text-white`}
         suppressHydrationWarning
       >
         <Header />

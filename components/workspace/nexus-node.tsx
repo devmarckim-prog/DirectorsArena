@@ -1,134 +1,166 @@
-"use client";
+// components/workspace/nexus-node.tsx
 
-import { motion } from "framer-motion";
-import type { NexusCharacter, NodeLayout } from "./nexus-types";
-import { hashString } from "./nexus-types";
-import { CANVAS_W, CANVAS_H } from "./nexus-layout";
+import { motion } from 'framer-motion';
 
 interface NexusNodeProps {
-  character: NexusCharacter;
-  layout: NodeLayout;
+  character: any;
+  position: { x: number; y: number; size: number; color: string };
   isSelected: boolean;
+  isHovered: boolean;
+  isProtagonist: boolean;
+  index: number;
   onClick: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }
 
-const ARCHETYPE_SYMBOL: Record<string, string> = {
-  PROTAGONIST: '★',
-  VILLAIN: '✦',
-  ALLY: '◆',
-  NEUTRAL: '●',
-};
+export function NexusNode({
+  character,
+  position,
+  isSelected,
+  isHovered,
+  isProtagonist,
+  index,
+  onClick,
+  onMouseEnter,
+  onMouseLeave
+}: NexusNodeProps) {
+  const baseSize = position.size * 1.4;
+  const radius = baseSize / 2;
 
-export function NexusNode({ character, layout, isSelected, onClick }: NexusNodeProps) {
-  // Deterministic animation timing — no Math.random()
-  const seed = hashString(character.id);
-  const floatDuration = 2.5 + (seed % 20) / 10;
-  const floatDelay = (seed % 15) / 10;
+  const x = position.x ?? 0;
+  const y = position.y ?? 0;
 
-  const leftPct = (layout.x / CANVAS_W) * 100;
-  const topPct = (layout.y / CANVAS_H) * 100;
-  const symbol = ARCHETYPE_SYMBOL[character.archetype] ?? '●';
+  // ✅ 심플한 실루엣 아이콘 렌더링 함수
+  const renderSimpleAvatar = () => {
+    const age = character.age || 30;
+    const gender = character.gender?.toUpperCase();
+    const isAlien = character.traits?.some((t: string) => t.toLowerCase().includes('외계') || t.toLowerCase().includes('alien')) || 
+                   character.description?.includes('외계') || character.description?.includes('alien') || gender === 'OTHER';
+
+    const iconColor = "#ffffff";
+    const iconScale = radius * 0.04; // 노드 크기에 맞춘 스케일
+
+    if (isAlien) {
+      // Alien Icon (Minimalist)
+      return (
+        <g transform={`scale(${iconScale}) translate(-12, -12)`}>
+          <path fill={iconColor} d="M12,2C8,2,4,6,4,11s3,9,8,9s8-4,8-9S16,2,12,2z M9,12c-0.6,0-1-0.4-1-1s0.4-1,1-1s1,0.4,1,1S9.6,12,9,12z M15,12c-0.6,0-1-0.4-1-1s0.4-1,1-1s1,0.4,1,1S15.6,12,15,12z" />
+        </g>
+      );
+    }
+
+    if (age < 13) {
+      // Child Icon
+      return (
+        <g transform={`scale(${iconScale}) translate(-12, -12)`}>
+          <circle fill={iconColor} cx="12" cy="8" r="4" />
+          <path fill={iconColor} d="M12,14c-4,0-6,2-6,4v2h12v-2C18,16,16,14,12,14z" />
+        </g>
+      );
+    }
+
+    if (gender === 'FEMALE') {
+      // Woman Icon (Longer hair silhouette)
+      return (
+        <g transform={`scale(${iconScale}) translate(-12, -12)`}>
+          <path fill={iconColor} d="M12,2c-2.8,0-5,2.2-5,5v1c0,1.1,0.4,2.1,1,2.8C6.1,12.1,4,14.8,4,18v2h16v-2c0-3.2-2.1-5.9-4-7.2c0.6-0.7,1-1.7,1-2.8V7C17,4.2,14.8,2,12,2z" />
+        </g>
+      );
+    }
+
+    if (gender === 'MALE') {
+      // Man Icon
+      return (
+        <g transform={`scale(${iconScale}) translate(-12, -12)`}>
+          <circle fill={iconColor} cx="12" cy="7" r="5" />
+          <path fill={iconColor} d="M12,14c-4.4,0-8,2-8,5v1h16v-1C20,16,16.4,14,12,14z" />
+        </g>
+      );
+    }
+
+    // Default / Neutral Icon
+    return (
+      <g transform={`scale(${iconScale}) translate(-12, -12)`}>
+        <path fill={iconColor} d="M12,12c2.2,0,4-1.8,4-4s-1.8-4-4-4S8,5.8,8,8S9.8,12,12,12z M12,14c-2.7,0-8,1.3-8,4v2h16v-2C20,15.3,14.7,14,12,14z" />
+      </g>
+    );
+  };
 
   return (
-    <motion.button
-      onClick={(e) => {
-        console.log('🔴 NexusNode: CLICKED', { id: character.id, name: character.name });
-        onClick();
+    <motion.g
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+      animate={{
+        scale: isSelected ? 1.2 : (isHovered ? 1.1 : 1),
       }}
-      style={{
-        position: 'absolute',
-        left: `${leftPct}%`,
-        top: `${topPct}%`,
-        transform: 'translate(-50%, -50%)',
-        zIndex: isSelected ? 30 : 20,
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
-      }}
-      animate={{ 
-        scale: isSelected ? 1.25 : 1,
-        y: isSelected ? 0 : [0, -6, 0]
-      }}
-      transition={{ 
-        scale: { duration: 0.3, ease: 'easeOut' },
-        y: {
-          duration: floatDuration,
-          repeat: isSelected ? 0 : Infinity,
-          ease: "easeInOut",
-          delay: floatDelay
-        }
-      }}
+      transition={{ duration: 0.2 }}
     >
+      <g transform={`translate(${x}, ${y})`}>
+        <g>
+          <animateTransform
+            attributeName="transform"
+            type="translate"
+            values="0,0; 0,-10; 0,0"
+            dur={`${3 + (index % 2) * 0.5}s`}
+            repeatCount="indefinite"
+            begin={`${index * 0.2}s`}
+          />
 
-      {/* Avatar circle */}
-      <div
-        style={{
-          width: layout.size,
-          height: layout.size,
-          borderRadius: '50%',
-          background: '#070710',
-          border: `${isSelected ? 3 : 2}px solid ${layout.color}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: isSelected
-            ? `0 0 28px ${layout.color}80, 0 0 8px ${layout.color}40`
-            : `0 0 8px ${layout.color}25`,
-          color: layout.color,
-          fontSize: Math.round(layout.size * 0.38),
-          transition: 'box-shadow 0.3s, border-width 0.3s',
-        }}
-      >
-        {symbol}
-      </div>
+          {isProtagonist && (
+            <g opacity={0.3}>
+              <circle r={radius + 15} fill="none" stroke={position.color} strokeWidth="1.5">
+                <animate attributeName="r" values={`${radius + 15};${radius + 30};${radius + 15}`} dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite" />
+              </circle>
+            </g>
+          )}
 
-      {/* Name label */}
-      <div
-        style={{
-          position: 'absolute',
-          top: layout.size + 12,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          whiteSpace: 'nowrap',
-          fontSize: '14px',
-          fontFamily: 'var(--font-sans)',
-          fontWeight: 700,
-          color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.7)',
-          letterSpacing: '0.02em',
-          textShadow: `
-            0 0 12px rgba(0,0,0,1),
-            0 0 4px ${layout.color}CC
-          `,
-          transition: 'color 0.3s, transform 0.3s',
-          pointerEvents: 'none',
-        }}
-      >
-        {character.name}
-      </div>
+          <circle
+            r={radius}
+            fill="#0d0d1a"
+            stroke={position.color}
+            strokeWidth={isProtagonist ? 5 : 3}
+            filter={isProtagonist || isHovered ? "url(#glow)" : "none"}
+          />
 
-      {/* Faction badge — only when selected */}
-      {isSelected && (
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            position: 'absolute',
-            top: layout.size + 26,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: '7px',
-            fontFamily: 'monospace',
-            color: layout.color,
-            opacity: 0.65,
-            whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-            letterSpacing: '1.5px',
-          }}
-        >
-          {character.faction.toUpperCase()}
-        </motion.div>
-      )}
-    </motion.button>
+          {/* ✅ 프리미엄 심플 실루엣 아이콘 적용 */}
+          {renderSimpleAvatar()}
+
+          <text 
+            y={radius + 30} 
+            textAnchor="middle" 
+            fill="#ffffff" 
+            fontSize="18" 
+            fontWeight="500" 
+            style={{ 
+              userSelect: 'none', 
+              textShadow: '0 0 10px rgba(0,0,0,0.9)',
+              letterSpacing: '-0.01em'
+            }}
+          >
+            {character.name}
+          </text>
+
+          <text 
+            y={radius + 52} 
+            textAnchor="middle" 
+            fill={position.color} 
+            fontSize="12" 
+            fontWeight="400" 
+            opacity="0.9" 
+            style={{ 
+              userSelect: 'none', 
+              fontFamily: 'monospace',
+              letterSpacing: '0.08em'
+            }}
+          >
+            {character.job?.toUpperCase()}
+          </text>
+        </g>
+      </g>
+    </motion.g>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Play, Loader2, Sparkles, LayoutDashboard
+  Play, Loader2, Sparkles, LayoutDashboard, ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -75,6 +75,7 @@ interface CompsTabProps {
 export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGenerated }: CompsTabProps) {
   const [data, setData] = useState<Comp[] | null>(storedComps || null);
   const [isLoading, setIsLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(4);
 
   useEffect(() => {
     if (storedComps && storedComps.length > 0) {
@@ -122,7 +123,9 @@ export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGene
     };
   };
 
-  const currentList = data || metadata?.similarWorks || null;
+  const currentList = data || metadata?.similarWorks || [];
+  const displayedList = (currentList || []).slice(0, visibleCount);
+  const hasMore = currentList && currentList.length > visibleCount;
 
   return (
     <div className="space-y-8 px-4">
@@ -164,23 +167,36 @@ export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGene
             ))}
           </motion.div>
         ) : currentList && currentList.length > 0 ? (
-          <motion.div 
-            key="list"
-            className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-12"
-          >
-            {currentList.map((item: Comp, idx: number) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1, duration: 0.6 }}
-              >
-                <ProjectCard 
-                  project={mapCompToProject(item)} 
-                />
-              </motion.div>
-            ))}
-          </motion.div>
+          <div className="space-y-8">
+            <motion.div 
+              key="list"
+              className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
+              {displayedList.map((item: Comp, idx: number) => (
+                <motion.div 
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.6 }}
+                >
+                  <ProjectCard 
+                    project={mapCompToProject(item)} 
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+            {hasMore && (
+              <div className="flex justify-center pb-12">
+                <button 
+                  onClick={() => setVisibleCount(prev => prev + 4)}
+                  className="flex items-center space-x-2 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[10px] font-bold uppercase tracking-widest text-neutral-400"
+                >
+                  <span>Load More</span>
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <motion.div 
              key="empty"

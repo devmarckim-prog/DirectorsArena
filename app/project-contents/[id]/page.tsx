@@ -9,7 +9,8 @@ import {
   generateEpisodeSceneDraftAction,
   updateEpisodeScriptContentAction,
   updateCharacterAction,
-  triggerRegenerateAction
+  triggerRegenerateAction,
+  updateProjectAction
 } from "@/app/actions";
 import { supabase } from "@/lib/supabase/client";
 import { EpisodeSceneDraft } from "@/lib/schemas/generation";
@@ -386,6 +387,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     return result;
   };
 
+  const handleUpdateProject = async (updates: any) => {
+    setProject((prev: any) => prev ? { ...prev, ...updates } : prev);
+    const result = await updateProjectAction(id, updates);
+    if (!result.success) {
+      // Rollback on failure
+      const ref = await fetchProjectDetailsAction(id);
+      if (ref) setProject(ref);
+      alert("Failed to update project: " + result.error);
+    }
+    return result;
+  };
+
   if (!project) return <div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-brand-gold" /></div>;
 
   const isSynopsisReady = !!project.synopsis;
@@ -398,7 +411,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
       <main className={cn("flex-1 ml-20 min-h-screen relative bg-[#050505] transition-all duration-300", isCoWriterOpen ? "mr-96" : "mr-0")}>
         <div className="max-w-[1700px] mx-auto min-h-screen relative px-12 lg:px-24">
-          <HeroHeader project={project} metadata={metadata} masterMode={masterMode} scenarioTab={scenarioTab} setScenarioTab={setScenarioTab} productionTab={productionTab} setProductionTab={setProductionTab} />
+          <HeroHeader 
+            project={project} 
+            metadata={metadata} 
+            masterMode={masterMode} 
+            scenarioTab={scenarioTab} 
+            setScenarioTab={setScenarioTab} 
+            productionTab={productionTab} 
+            setProductionTab={setProductionTab}
+            onUpdateProject={handleUpdateProject}
+          />
 
           <section className="mt-12 pb-60 z-10 relative">
             <AnimatePresence mode="wait">

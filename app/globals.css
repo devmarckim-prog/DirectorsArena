@@ -105,6 +105,11 @@ body::after {
     color: #D1D5DB;
   }
 
+  .font-handwritten {
+    font-family: var(--font-nanum-pen), cursive;
+    color: var(--brand-gold);
+  }
+
   .perspective-2000 {
     perspective: 2000px;
   }

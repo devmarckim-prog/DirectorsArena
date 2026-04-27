@@ -39,11 +39,15 @@ export async function persistProjectGeneration(
       project_id: projectId,
       name: char.name,
       gender: char.gender,
-      age: 0,
-      job: char.role,
+      age: char.age || 0,
+      job: char.job || char.role,
       look: char.description,
       relationship_type: char.relationshipToProtagonist,
       age_group: char.ageGroup,
+      desire: char.desire,
+      relations: char.relations,
+      traits: char.traits,
+      groups: char.groups
     }));
     await supabase.from('characters_v2').insert(charactersToInsert);
   }
