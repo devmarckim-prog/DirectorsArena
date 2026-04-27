@@ -66,15 +66,16 @@ export async function POST(
     }
 
     const userPrompt = `
-Here is the project data for analysis:
+CRITICAL ANALYSIS TASK:
+Identify the unique "Cinematic Genome" of the following project:
 Title: ${project.title || 'Untitled'}${englishTitle ? ` (${englishTitle})` : ''}
 Genre: ${project.genre}
 World Setting: ${project.world}
 Logline: ${project.logline}
 Story Synopsis Summary: ${epicNarrative ? epicNarrative.substring(0, 1200) : '(No synopsis yet)'}
 
-Based on the metadata above, provide exactly 12-16 recommendations. 
-Ensure a mix of Global (Hollywood) and Korean contents if applicable.
+Based on these specific details, provide exactly 12-16 recommendations that capture the PROJECT-SPECIFIC emotional core, narrative structure, or aesthetic style. 
+Avoid generic top-tier movies unless they are a PERFECT narrative match. Look for cult classics, indie gems, or specific international hits that share this project's unique frequency.
 `;
 
     // 3. AI Generation

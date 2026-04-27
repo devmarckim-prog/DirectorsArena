@@ -437,7 +437,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       isStreaming={isStreaming}
                     />
                   )}
-                  {scenarioTab === 'SIMILAR' && <CompsTab projectId={project.id} hasSynopsis={isSynopsisReady} storedComps={project.similar_works} />}
+                  {scenarioTab === 'SIMILAR' && <CompsTab projectId={project.id} hasSynopsis={isSynopsisReady} storedComps={project.similar_works} metadata={metadata} />}
                   {scenarioTab === 'NAVIGATOR' && (
                     <NavigatorTab 
                       project={project} beats={project.story_beats} selectedEpisode={selectedEpisode} setSelectedEpisode={setSelectedEpisode} 

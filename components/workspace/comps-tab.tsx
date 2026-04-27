@@ -78,10 +78,10 @@ export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGene
   const [visibleCount, setVisibleCount] = useState(4);
 
   useEffect(() => {
-    if (storedComps && storedComps.length > 0) {
-      setData(storedComps);
-    }
-  }, [storedComps]);
+    // Reset state when project changes
+    setData(storedComps || (metadata?.similarWorks) || null);
+    setVisibleCount(4);
+  }, [projectId, storedComps, metadata?.similarWorks]);
 
   const handleGenerate = async () => {
     if (!hasSynopsis) return;
