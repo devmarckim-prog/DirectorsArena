@@ -229,11 +229,89 @@ export class AntigravityLayoutEngine {
     }
   }
 
+  // ✅ 관계 타입별 스타일 (더 세밀하게)
+  private getConnectionStyle(type: string): { 
+    color: string, 
+    dashArray?: string,
+    strokeWidth: number 
+  } {
+    const styles = {
+      romantic: { 
+        color: '#ff006e',      // 핑크
+        dashArray: undefined,  // 실선
+        strokeWidth: 3         // 두껍게
+      },
+      family: { 
+        color: '#a78bfa',      // 보라
+        dashArray: undefined,  // 실선
+        strokeWidth: 2.5
+      },
+      friend: { 
+        color: '#06ffa5',      // 청록
+        dashArray: '6,3',      // 중간 점선
+        strokeWidth: 2
+      },
+      mentor: { 
+        color: '#ffbe0b',      // 노랑
+        dashArray: '4,2',      // 짧은 점선
+        strokeWidth: 2
+      },
+      enemy: { 
+        color: '#ff4444',      // 빨강
+        dashArray: '8,4',      // 긴 점선
+        strokeWidth: 2
+      },
+      ally: { 
+        color: '#06ffa5',      // 청록
+        dashArray: undefined,  // 실선
+        strokeWidth: 1.5
+      },
+      neutral: { 
+        color: '#666666',      // 회색
+        dashArray: '2,2',      // 아주 짧은 점선
+        strokeWidth: 1
+      }
+    };
+    
+    return styles[type as keyof typeof styles] || styles.neutral;
+  }
+
+  // ✅ 연결선 계산 수정 (스타일 적용)
   calculateConnections(
     relationships: NexusRelationship[],
     positions: Record<string, LayoutPosition>
   ): ConnectionPath[] {
-    // nexus-graph.tsx에서 직접 처리하도록 요청됨 (STEP 3)
-    return [];
+    return relationships.map(rel => {
+      const from = positions[rel.from];
+      const to = positions[rel.to];
+      
+      if (!from || !to) return null;
+      
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const curvature = Math.min(distance * 0.25, 180);
+      
+      const midX = (from.x + to.x) / 2;
+      const midY = (from.y + to.y) / 2;
+      const controlY = midY - curvature;
+      
+      const path = `M ${from.x},${from.y} Q ${midX},${controlY} ${to.x},${to.y}`;
+      
+      // ✅ 타입별 스타일 가져오기
+      const style = this.getConnectionStyle(rel.type);
+      
+      return {
+        from: rel.from,
+        to: rel.to,
+        path,
+        strokeWidth: style.strokeWidth * (Math.max(rel.strength, 3) / 7),  // 강도 반영 (최소값 보정)
+        color: style.color,
+        opacity: Math.max(0.5, (rel.strength || 5) / 12 + 0.4),
+        dashArray: style.dashArray,
+        type: rel.type,  // ✅ 타입 정보 포함
+        description: rel.description  // ✅ 설명 포함
+      } as any; // Type override since ConnectionPath might need extending, but we'll cast to any for now or just add it to type definition. Wait, ConnectionPath in nexus-layout.ts already has dashArray? Let's check. Yes, it has dashArray but might not have type/description.
+    }).filter(Boolean) as ConnectionPath[];
   }
 }

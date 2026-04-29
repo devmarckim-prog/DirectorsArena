@@ -101,10 +101,10 @@ export default function CreateProjectPage() {
               <StepOne key="step1" formData={formData} setFormData={setFormData} onNext={nextStep} />
             )}
             {currentStep === 2 && (
-              <StepTwo key="step2" formData={formData} setFormData={setFormData} onNext={nextStep} />
+              <StepThree key="step3" formData={formData} setFormData={setFormData} onNext={nextStep} />
             )}
             {currentStep === 3 && (
-              <StepThree key="step3" formData={formData} setFormData={setFormData} onNext={nextStep} />
+              <StepTwo key="step2" formData={formData} setFormData={setFormData} onNext={nextStep} />
             )}
             {currentStep === 4 && (
               <StepFour key="step4" formData={formData} setFormData={setFormData} onProduce={handleProduce} />

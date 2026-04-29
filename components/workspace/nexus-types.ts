@@ -3,17 +3,18 @@
 export interface Character {
   id: string;
   name: string;
-  job: string;
-  traits?: string[];
-  groups?: string[];  // AI가 주는 진영 데이터
-  relations?: RelationItem[];  // AI가 주는 관계 데이터
-  personality?: string;
-  age?: number;
+  gender?: string;
+  ageGroup?: string;
+  role: string;
+  description?: string;
+  relationshipToProtagonist?: string;  // ✅ 기존 필드 유지
+  groups?: string[];  // ✅ 진영 정보
+  relations?: RelationItem[];  // ✅ 새로운 관계 필드
 }
 
 export interface RelationItem {
   target: string;
-  type: string;
+  type: 'enemy' | 'ally' | 'family' | 'romantic' | 'friend' | 'mentor' | 'neutral';
   description?: string;
   strength?: number;
 }
@@ -21,21 +22,24 @@ export interface RelationItem {
 export interface NexusCharacter {
   id: string;
   name: string;
-  job: string;
+  role: string;
   faction: string;
   importance: number;
   color: string;
+  ageGroup?: string;  // ✅ 타임라인 구분용
 }
 
 export interface NexusRelationship {
   from: string;
   to: string;
-  type: 'enemy' | 'ally' | 'family' | 'neutral';
+  type: 'enemy' | 'ally' | 'family' | 'romantic' | 'friend' | 'mentor' | 'neutral';
   strength: number;
+  description?: string;
 }
 
 export interface NexusFaction {
   name: string;
+  displayName: string;  // ✅ 한글 표시명
   color: string;
   position: 'left' | 'right' | 'top' | 'bottom';
 }
@@ -46,37 +50,37 @@ export interface NexusData {
   factions: NexusFaction[];
 }
 
-// ✅ 메인 변환 함수 (3단계 폴백)
+// ✅ 메인 변환 함수
 export function deriveNexusData(rawCharacters: Character[]): NexusData {
-  console.log('🔄 deriveNexusData 시작:', rawCharacters.length, '명');
+  console.log('🔄 deriveNexusData 시작:', rawCharacters);
   
-  // 1단계: 빈 배열 방어
   if (!rawCharacters || rawCharacters.length === 0) {
-    console.warn('⚠️ 캐릭터 데이터 없음 - 더미 데이터 생성');
-    return createDummyData();
+    console.warn('⚠️ 캐릭터 없음');
+    return { characters: [], relationships: [], factions: [] };
   }
   
-  // 2단계: 진영 추론 (groups 우선 → job 키워드 폴백)
+  // 1. 캐릭터 변환
   const characters: NexusCharacter[] = rawCharacters.map((char, index) => {
     const faction = inferFaction(char);
-    const importance = inferImportance(char, index);
+    const importance = inferImportance(char, index, rawCharacters);
     const color = getFactionColor(faction);
     
     return {
-      id: char.id || `char-${index}-${char.name || 'unnamed'}`,
-      name: char.name || `캐릭터 ${index + 1}`,
-      job: char.job || '역할 미정',
+      id: char.id,
+      name: char.name,
+      role: char.role,
       faction,
       importance,
-      color
+      color,
+      ageGroup: char.ageGroup
     };
   });
   
-  // 3단계: 관계 추론 (relations 우선 → 자동 생성 폴백)
+  // 2. 관계 변환 (relations 필드 우선)
   const relationships = deriveRelationships(rawCharacters, characters);
   
-  // 4단계: 진영 목록 생성
-  const factions = deriveFactions(characters);
+  // 3. 진영 생성
+  const factions = deriveFactions(characters, rawCharacters);
   
   console.log('✅ 변환 완료:', {
     characters: characters.length,
@@ -87,253 +91,227 @@ export function deriveNexusData(rawCharacters: Character[]): NexusData {
   return { characters, relationships, factions };
 }
 
-// ✅ 진영 추론 (3단계 폴백)
+// ✅ 진영 추론 (groups 우선 → role 폴백)
 function inferFaction(char: Character): string {
-  // 1단계: AI가 준 groups 사용
+  // 1단계: groups 사용
   if (char.groups && char.groups.length > 0) {
-    return normalizeFactionName(char.groups[0]);
+    return char.groups[0];
   }
   
-  // 2단계: job 분석 (확장 키워드)
-  const jobStr = char.job?.toLowerCase() || '';
-  if (/(villain|enemy|dark|terror|assassin|traitor|shadow|killer|criminal)/i.test(jobStr)) return 'ANTAGONIST_FORCE';
-  if (/(hero|protagonist|leader|police|detective|officer|guardian|savior)/i.test(jobStr)) return 'PROTAGONIST_ALLIANCE';
-  
-  // 3단계: traits 분석 (확장 키워드)
-  const traitStr = (char.traits || []).join(' ').toLowerCase();
-  if (/(evil|cruel|greedy|manipulative|aggressive|cold-blooded)/i.test(traitStr)) return 'ANTAGONIST_FORCE';
-  if (/(brave|justice|kind|loyal|righteous|compassionate)/i.test(traitStr)) return 'PROTAGONIST_ALLIANCE';
-  
-  // 4단계: 기본값
-  return 'NEUTRAL_ZONE';
-}
-
-// ✅ 진영명 정규화
-function normalizeFactionName(rawName: string): string {
-  const normalized = rawName.toUpperCase().replace(/\s+/g, '_');
-  
-  // 알려진 패턴 매칭
-  if (normalized.includes('PROTAGONIST') || normalized.includes('HERO') || normalized.includes('주인공')) {
-    return 'PROTAGONIST_ALLIANCE';
+  // 2단계: ageGroup 기반 타임라인 구분
+  const age = char.ageGroup?.toLowerCase() || '';
+  if (age.includes('과거') || age.includes('20대')) {
+    return '1985_노래방_창업팀';
   }
-  if (normalized.includes('ANTAGONIST') || normalized.includes('VILLAIN') || normalized.includes('악당')) {
-    return 'ANTAGONIST_FORCE';
+  if (age.includes('현재') || age.includes('60대')) {
+    return '2025_현재';
   }
-  if (normalized.includes('NEUTRAL') || normalized.includes('중립')) {
-    return 'NEUTRAL_ZONE';
+  if (age.includes('30대')) {
+    return '2세대';
   }
   
-  // 그대로 사용
-  return normalized;
+  // 3단계: role 기반
+  const role = char.role?.toLowerCase() || '';
+  if (role.includes('주인공')) {
+    return '주인공_진영';
+  }
+  if (role.includes('조연')) {
+    return '조연_진영';
+  }
+  
+  return '중립';
 }
 
 // ✅ 중요도 추론
-function inferImportance(char: Character, index: number): number {
-  const job = (char.job || '').toLowerCase();
+function inferImportance(char: Character, index: number, all: Character[]): number {
+  const role = char.role?.toLowerCase() || '';
+  const relCount = char.relations?.length || 0;
   
-  if (job.includes('주인공') || job.includes('protagonist')) return 10;
-  if (job.includes('악당') || job.includes('antagonist')) return 9;
-  if (job.includes('멘토') || job.includes('mentor')) return 8;
-  if (job.includes('조연') || job.includes('supporting')) return 6;
+  // 주인공
+  if (role.includes('주인공') || role.includes('protagonist')) {
+    return 10;
+  }
   
-  // 등장 순서 기반 (첫 3명은 중요)
-  if (index < 3) return 7;
+  // 관계가 많을수록 중요
+  if (relCount >= 3) return 9;
+  if (relCount === 2) return 7;
+  if (relCount === 1) return 6;
+  
+  // 등장 순서
+  if (index < 2) return 8;
   
   return 5;
 }
 
-// ✅ 진영 색상 매핑
+// ✅ 진영 색상 (타임라인별 구분)
 function getFactionColor(faction: string): string {
   const colorMap: Record<string, string> = {
-    'PROTAGONIST_ALLIANCE': '#06ffa5',  // 청록
-    'ANTAGONIST_FORCE': '#ff006e',      // 핑크
-    'NEUTRAL_ZONE': '#ffbe0b',          // 노랑
-    'DIRECTORS_ARENA': '#d4af37',        // 골드 (기존 호환)
-    'TVN_PLATFORM': '#ec4899',          // 핑크 (기존 호환)
-    'TALENT_POOL': '#06b6d4',           // 시안 (기존 호환)
-    'THE_ORACLE': '#a78bfa'             // 보라 (기존 호환)
+    // 과거 타임라인
+    '1985_노래방_창업팀': '#06ffa5',
+    '과거_주인공_진영': '#06ffa5',
+    
+    // 현재 타임라인
+    '2025_현재': '#ff006e',
+    '현재_기업가': '#ff006e',
+    '현재_음악교사': '#a78bfa',
+    
+    // 2세대
+    '2세대': '#ffbe0b',
+    '현재_2세대': '#ffbe0b',
+    
+    // 기본
+    '주인공_진영': '#06ffa5',
+    '조연_진영': '#888888',
+    '중립': '#666666'
   };
   
   return colorMap[faction] || '#888888';
 }
 
-// ✅ 관계 추론 (AI relations 우선 → 자동 생성 폴백)
+// ✅ 관계 변환 (핵심 로직)
 function deriveRelationships(
   rawChars: Character[],
   nexusChars: NexusCharacter[]
 ): NexusRelationship[] {
   const relationships: NexusRelationship[] = [];
-  const processed = new Set<string>();  // 중복 방지
+  const processed = new Set<string>();
   
-  // 1단계: AI가 준 relations 사용
+  // 1단계: relations 필드에서 추출
   rawChars.forEach(char => {
     if (!char.relations || char.relations.length === 0) return;
     
     char.relations.forEach(rel => {
-      const fromChar = nexusChars.find(c => c.id === char.id);
+      const fromChar = nexusChars.find(c => c.name === char.name);
       const toChar = nexusChars.find(c => c.name === rel.target);
       
       if (!fromChar || !toChar) {
-        console.warn('관계 대상 미발견:', rel.target);
+        console.warn('⚠️ 관계 대상 미발견:', char.name, '→', rel.target);
         return;
       }
       
-      const key = [fromChar.id, toChar.id].sort().join('-');
-      if (processed.has(key)) return;  // 중복 제거
+      // 중복 방지 (양방향 처리)
+      const key1 = `${fromChar.id}-${toChar.id}`;
+      const key2 = `${toChar.id}-${fromChar.id}`;
+      
+      if (processed.has(key1) || processed.has(key2)) return;
       
       relationships.push({
         from: fromChar.id,
         to: toChar.id,
         type: normalizeRelationType(rel.type),
-        strength: rel.strength || 5
+        strength: rel.strength || 5,
+        description: rel.description
       });
       
-      processed.add(key);
+      processed.add(key1);
+      processed.add(key2);
     });
   });
   
-  // 2단계: 자동 생성 (relations 없는 경우)
+  console.log(`✅ ${relationships.length}개 관계 생성`);
+  
+  // 2단계: 폴백 (relations 없는 경우 자동 생성)
   if (relationships.length === 0) {
-    console.log('📝 관계 데이터 없음 - 자동 생성');
-    
-    // 같은 진영끼리 ally
-    nexusChars.forEach((char1, i) => {
-      nexusChars.forEach((char2, j) => {
-        if (i >= j) return;
-        
-        const key = [char1.id, char2.id].sort().join('-');
-        if (processed.has(key)) return;
-        
-        if (char1.faction === char2.faction && char1.faction !== 'NEUTRAL_ZONE') {
-          relationships.push({
-            from: char1.id,
-            to: char2.id,
-            type: 'ally',
-            strength: 6
-          });
-          processed.add(key);
-        }
-      });
-    });
-    
-    // 적대 진영끼리 enemy
-    const protagonist = nexusChars.find(c => c.importance === 10);
-    const antagonist = nexusChars.find(c => c.faction === 'ANTAGONIST_FORCE');
-    
-    if (protagonist && antagonist) {
-      const key = [protagonist.id, antagonist.id].sort().join('-');
-      if (!processed.has(key)) {
-        relationships.push({
-          from: protagonist.id,
-          to: antagonist.id,
-          type: 'enemy',
-          strength: 10
-        });
-      }
-    }
+    console.log('📝 relations 없음 - 자동 생성');
+    return generateFallbackRelationships(nexusChars);
   }
   
-  console.log(`✅ 관계 ${relationships.length}개 생성`);
   return relationships;
 }
 
 // ✅ 관계 타입 정규화
-function normalizeRelationType(rawType: string): 'enemy' | 'ally' | 'family' | 'neutral' {
+function normalizeRelationType(rawType: string): NexusRelationship['type'] {
   const normalized = rawType.toLowerCase();
   
-  if (normalized.includes('enemy') || normalized.includes('적') || normalized.includes('rival')) {
+  if (normalized.includes('romantic') || normalized.includes('사랑') || normalized.includes('연인')) {
+    return 'romantic';
+  }
+  if (normalized.includes('family') || normalized.includes('가족') || normalized.includes('부모') || normalized.includes('자식')) {
+    return 'family';
+  }
+  if (normalized.includes('friend') || normalized.includes('친구') || normalized.includes('절친')) {
+    return 'friend';
+  }
+  if (normalized.includes('mentor') || normalized.includes('스승') || normalized.includes('멘토')) {
+    return 'mentor';
+  }
+  if (normalized.includes('enemy') || normalized.includes('적') || normalized.includes('라이벌')) {
     return 'enemy';
   }
-  if (normalized.includes('ally') || normalized.includes('동료') || normalized.includes('friend')) {
+  if (normalized.includes('ally') || normalized.includes('동맹') || normalized.includes('협력')) {
     return 'ally';
-  }
-  if (normalized.includes('family') || normalized.includes('가족') || normalized.includes('혈연')) {
-    return 'family';
   }
   
   return 'neutral';
 }
 
-// ✅ 진영 목록 생성 (주요 진영 고정 및 나머지 유동 배치)
-function deriveFactions(characters: NexusCharacter[]): NexusFaction[] {
-  const factionSet = new Set(characters.map(c => c.faction));
-  const factionList: NexusFaction[] = [];
+// ✅ 폴백: 자동 관계 생성
+function generateFallbackRelationships(chars: NexusCharacter[]): NexusRelationship[] {
+  const rels: NexusRelationship[] = [];
+  const processed = new Set<string>();
   
-  // 1. 주요 진영 우선 배치
-  const priorityFactions: Record<string, 'left' | 'right' | 'top' | 'bottom'> = {
-    'PROTAGONIST_ALLIANCE': 'left',
-    'ANTAGONIST_FORCE': 'right',
-    'NEUTRAL_ZONE': 'top'
-  };
-  
-  Object.entries(priorityFactions).forEach(([name, position]) => {
-    if (factionSet.has(name)) {
-      factionList.push({ name, color: getFactionColor(name), position });
-      factionSet.delete(name);
-    }
+  // 같은 진영끼리 연결
+  chars.forEach((c1, i) => {
+    chars.forEach((c2, j) => {
+      if (i >= j) return;
+      
+      const key = `${c1.id}-${c2.id}`;
+      if (processed.has(key)) return;
+      
+      if (c1.faction === c2.faction && c1.faction !== '중립') {
+        rels.push({
+          from: c1.id,
+          to: c2.id,
+          type: 'ally',
+          strength: 6
+        });
+        processed.add(key);
+      }
+    });
   });
   
-  // 2. 나머지 진영 배치 (bottom부터 채움)
-  const remainingPositions: ('left' | 'right' | 'top' | 'bottom')[] = ['bottom', 'top', 'left', 'right'];
-  let idx = 0;
+  return rels;
+}
+
+// ✅ 진영 생성
+function deriveFactions(chars: NexusCharacter[], rawChars: Character[]): NexusFaction[] {
+  const factionSet = new Set(chars.map(c => c.faction));
+  const factions: NexusFaction[] = [];
+  
+  const factionConfig: Record<string, { displayName: string, position: 'left' | 'right' | 'top' | 'bottom' }> = {
+    '1985_노래방_창업팀': { displayName: '1985 노래방 창업팀', position: 'left' },
+    '과거_주인공_진영': { displayName: '과거 주인공 진영', position: 'left' },
+    '2025_현재': { displayName: '2025 현재', position: 'right' },
+    '현재_기업가': { displayName: '현재 기업가', position: 'right' },
+    '현재_음악교사': { displayName: '현재 음악교사', position: 'right' },
+    '2세대': { displayName: '2세대', position: 'bottom' },
+    '현재_2세대': { displayName: '2세대', position: 'bottom' },
+    '주인공_진영': { displayName: '주인공', position: 'left' },
+    '조연_진영': { displayName: '조연', position: 'right' }
+  };
+  
+  let posIndex = 0;
+  const positions: ('left' | 'right' | 'top' | 'bottom')[] = ['left', 'right', 'top', 'bottom'];
   
   factionSet.forEach(name => {
-    factionList.push({ 
-      name, 
-      color: getFactionColor(name), 
-      position: remainingPositions[idx % remainingPositions.length] 
+    const config = factionConfig[name];
+    const color = getFactionColor(name);
+    
+    factions.push({
+      name,
+      displayName: config?.displayName || name,
+      color,
+      position: config?.position || positions[posIndex++ % 4]
     });
-    idx++;
   });
   
-  return factionList;
+  return factions;
 }
 
-// ✅ 더미 데이터 생성 (최후 폴백)
-function createDummyData(): NexusData {
-  return {
-    characters: [
-      {
-        id: 'dummy-1',
-        name: '주인공',
-        job: '히어로',
-        faction: 'PROTAGONIST_ALLIANCE',
-        importance: 10,
-        color: '#06ffa5'
-      },
-      {
-        id: 'dummy-2',
-        name: '악당',
-        job: '빌런',
-        faction: 'ANTAGONIST_FORCE',
-        importance: 9,
-        color: '#ff006e'
-      }
-    ],
-    relationships: [
-      {
-        from: 'dummy-1',
-        to: 'dummy-2',
-        type: 'enemy',
-        strength: 10
-      }
-    ],
-    factions: [
-      { name: 'PROTAGONIST_ALLIANCE', color: '#06ffa5', position: 'left' },
-      { name: 'ANTAGONIST_FORCE', color: '#ff006e', position: 'right' }
-    ]
-  };
-}
-
-// ✅ 결정론적 난수 (방어 로직 추가)
-export function seededRandom(seed: string | undefined | null): number {
-  if (!seed) return Math.random(); // 폴백: 일반 난수
-  
+export function seededRandom(seed: string): number {
   let hash = 0;
-  const str = String(seed);
-  for (let i = 0; i < str.length; i++) {
-    const charCode = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + charCode;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
     hash = hash & hash;
   }
   return Math.abs(hash % 100) / 100;

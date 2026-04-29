@@ -1,0 +1,67 @@
+line": "한국 알리바바에 파견온 중국인 우령은 알리바바를 그만 두고 화장품 무역업으로 성공하는 스토리",
+  "synopsis": "중국 우령",
+      "gender": "남성",
+      "ageGroup": "30대 초반",
+      "role": "주인공",
+      "description":.",
+      "relationshipToProtagonist": "주인공"
+    },
+    {
+      "name": "김소연",
+      "gender": "여성",
+      "ageGroup": "20대 후": "박사장",
+      "gender": "남성",
+      "ageGroup": "50대",
+      "role": "멘토",
+      "description":.",
+      "relationshipToProtagonist": "멘토"
+    }
+  ],
+  "structure": [
+    {
+      "act_number": 1,
+      "beat_type": "Opening Image기 어려움을 보여준다.",
+      "timestamp_label": "5-15분"
+    },
+    {
+      "act_number": 1,
+      "beat_type": "Inciting Incident",
+      "title K-뷰티의 가능성을 발견한다.",
+      "timestamp_label": "15-25분"
+    },
+    {
+      "act_number": 1,
+      "beat_type": 보여준다.",
+      "timestamp_label": "30-45분"
+    },
+    {
+      "act_number": 2,
+      "beat_type": "Midpoint",
+      "title": "환점을 맞는다.",
+      "timestamp_label": "45-55분"
+    },
+    {
+      "act_number": 2,
+      "beat_type": "Plot Point 2",
+      "act_number": 3,
+      "beat_type": "Resolution",
+      "title": "성공과 새로운 시작",
+      "description": "사업 성공과꿈을 향한 새로운 출발을 그린다.",
+      "timestamp_label": "80-90분"
+    }
+  ],
+  "episodes": [
+    {
+      "episodeNumber":견한다.",
+      "scriptContent": ""
+    },
+    {
+      "episodeNumber": 4,
+      "title": "새로운 비전",
+      "summary": "소갈등이 심화된다.",
+      "scriptContent": ""
+    },
+    {
+      "episodeNumber": 6,
+      "title": "사표",
+      "summary": "마

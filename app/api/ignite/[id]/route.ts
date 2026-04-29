@@ -54,19 +54,59 @@ export async function POST(
     console.log("[OMA] Phase 2: Updating DB to 10% (IGNITION)");
     await supabase.from('projects_v2').update({ status: 'BAKING', progress: 10 }).eq('id', projectId);
 
-    const systemPrompt = `당신은 드라마/시나리오 분석 전문가입니다.
+    const systemPrompt = `
+당신은 영화/드라마 시나리오 전문가입니다.
 대본이나 시나리오 설명을 입력받아, 등장인물을 JSON 배열로 추출하고 전체 프로젝트를 구성합니다.
 
 [출력 규칙]
 - 반드시 JSON 형식으로만 응답하세요. 다른 설명은 배제하십시오.
 - ProjectGenerationSchema를 엄격히 준수하십시오.
 
-[캐릭터 및 진영 필수 규칙]
-- "groups"는 절대 빈 배열이면 안 됩니다. 명시적 소속이 없으면 인물의 역할/입장을 기반으로 반드시 진영명을 추론하여 기입하십시오 (예: "경찰청", "범죄조직", "중립세력", "재벌가", "시민단체" 등).
-- 같은 세력 인물은 반드시 동일한 groups[0] 값을 공유해야 합니다.
-- 인물 간의 복잡한 관계망(All-to-All relations)을 상세히 기술하십시오. 단방향으로 기술하되(A→B만), 서사적 비중(strength: 1~10)과 관계 유형("ALLY" | "ENEMY" | "FAMILY" | "NEUTRAL")을 정확히 입력하십시오.
+# 캐릭터 생성 규칙
 
-JSON keys: koreanTitle, englishTitle, logline, synopsis, characters (array of {id, name, gender, age, ageGroup, role, job, desire, description, traits, relationshipToProtagonist, groups, relations}), structure, episodes.
+각 캐릭터는 반드시 다음 필드를 포함해야 합니다:
+
+{
+  "name": "캐릭터 이름",
+  "gender": "MALE|FEMALE|OTHER",
+  "ageGroup": "TEEN|20S|30S|40S|50S_PLUS",
+  "role": "역할",
+  "job": "직업",
+  "desire": "욕구",
+  "description": "설명",
+  "traits": ["성격 특징"],
+  "relationshipToProtagonist": "주인공과의 관계",
+  "groups": ["소속 진영"],
+  "relations": [
+    {
+      "target": "상대방 이름",
+      "type": "enemy|ally|family|romantic|friend|mentor",
+      "description": "관계 설명 (한 문장)",
+      "strength": 1~10 사이 숫자
+    }
+  ]
+}
+
+## relations 필드 생성 규칙
+
+1. **모든 캐릭터는 최소 2개 이상의 관계**를 가져야 합니다
+2. **주인공은 모든 캐릭터와 관계**를 가져야 합니다
+3. **양방향 관계는 한쪽만 정의**하면 됩니다 (A→B만 있으면 B→A는 자동)
+4. **관계 타입 정의:**
+   - romantic: 연인, 짝사랑, 첫사랑
+   - family: 부모-자식, 형제자매
+   - friend: 절친, 동료, 친구
+   - mentor: 스승-제자, 선배-후배
+   - enemy: 적대, 라이벌
+   - ally: 협력, 동맹
+
+5. **strength 규칙:**
+   - 10: 가장 중요한 관계 (주인공의 첫사랑, 부모-자식)
+   - 7-9: 중요한 관계 (절친, 멘토)
+   - 4-6: 일반 관계 (동료, 지인)
+   - 1-3: 약한 관계 (아는 사람)
+
+JSON keys: koreanTitle, englishTitle, logline, synopsis, characters, structure, episodes.
 Only include scriptContent for Episode 1.
 ${adminSettings?.prompt_scenario_init || ''}`;
 
@@ -183,7 +223,7 @@ ${adminSettings?.prompt_scenario_init || ''}`;
             // Extract the actual narrative synopsis from JSON (or use raw if plain text)
             let finalTitle = project.title;
             let epicNarrative = "";
-            let parsedSynopsisPayload = "";
+            let parsedSynopsisPayload: any = null;
 
             // 1. Initial Parsing with Safety Harness
             let aiData: any = null;
@@ -226,7 +266,7 @@ ${adminSettings?.prompt_scenario_init || ''}`;
               }
 
               // Also update the synopsis field for backward compatibility
-              parsedSynopsisPayload = JSON.stringify({
+              parsedSynopsisPayload = {
                 story: {
                   epicNarrative,
                   logline: aiData.logline || project.logline || '',
@@ -236,14 +276,14 @@ ${adminSettings?.prompt_scenario_init || ''}`;
                 characters: aiData.characters || [],
                 structure: aiData.structure || [],
                 episodes: aiData.episodes || []
-              });
+              };
 
               console.log(`[OMA] Safety Harness processed. Title: ${finalTitle}, Characters: ${aiData.characters?.length || 0}`);
             } catch (err) {
               console.error('[OMA] CRITICAL: Post-processing failed even with Safety Harness.', err);
-              parsedSynopsisPayload = JSON.stringify({
+              parsedSynopsisPayload = {
                 story: { epicNarrative: cleanText, logline: project.logline || '' }
-              });
+              };
             }
 
             // Save to sub-tables (Characters, Beats, Episodes) using repository

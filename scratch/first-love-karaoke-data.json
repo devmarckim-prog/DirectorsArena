@@ -1,0 +1,130 @@
+{
+  "title": "첫사랑 카라오케",
+  "logline": "1980년대 한국 노래방 초창기 노래방 창업을 한 젊은 남녀의 현대로 이어지는 가슴시린 첫사랑 이야기",
+  "synopsis": {
+    "story": {
+      "epicNarrative": "1985년 서울, 대학생 민호와 수지는 일본에서 들어온 신개념 '가라오케'에 매료되어 한국 최초의 노래방 창업에 뛰어든다. 좁은 지하실에서 시작된 그들의 사업은 폭발적인 인기를 얻지만, 성공과 함께 찾아온 시련과 오해로 두 사람은 헤어지게 된다. 40년 후, 성공한 사업가가 된 민호는 우연히 옛 노래방 자리에서 수지와 재회한다. 서로 다른 삶을 살아온 두 사람이 추억 속 그 노래들과 함께 잃어버린 사랑을 되찾아가는 감동적인 이야기.",
+      "logline": "1980년대 한국 노래방 초창기, 노래방 창업을 한 젊은 남녀의 현대로 이어지는 가슴 아픈 첫사랑 이야기"
+    },
+    "koreanTitle": "첫사랑 카라오케",
+    "englishTitle": "First Love Karaoke",
+    "characters": [
+      {
+        "name": "강민호",
+        "gender": "남성",
+        "ageGroup": "20대(과거), 60대(현재)",
+        "role": "남주인공",
+        "description": "1985년 경영학과 대학생, 진취적이고 도전정신이 강한 청년. 현재는 성공한 기업가지만 첫사랑을 잊지 못하고 있다.",
+        "relationshipToProtagonist": "주인공"
+      },
+      {
+        "name": "박수지",
+        "gender": "여성",
+        "ageGroup": "20대(과거), 60대(현재)",
+        "role": "여주인공",
+        "description": "1985년 음악과 대학생, 아름다운 목소리와 예술적 감성을 가진 여성. 현재는 음악 교사로 조용한 삶을 살고 있다.",
+        "relationshipToProtagonist": "첫사랑, 사업 파트너"
+      },
+      {
+        "name": "이재혁",
+        "gender": "남성",
+        "ageGroup": "20대(과거), 60대(현재)",
+        "role": "조연",
+        "description": "민호의 절친한 친구이자 초기 사업 파트너. 현실적이고 신중한 성격.",
+        "relationshipToProtagonist": "절친한 친구"
+      },
+      {
+        "name": "김영미",
+        "gender": "여성",
+        "ageGroup": "20대(과거), 60대(현재)",
+        "role": "조연",
+        "description": "수지의 룸메이트이자 가장 친한 친구. 활발하고 낙천적인 성격으로 두 사람의 관계를 지켜본다.",
+        "relationshipToProtagonist": "수지의 절친"
+      },
+      {
+        "name": "강민준",
+        "gender": "남성",
+        "ageGroup": "30대",
+        "role": "조연",
+        "description": "민호의 아들. 아버지의 과거를 알게 되면서 부자관계가 변화한다.",
+        "relationshipToProtagonist": "민호의 아들"
+      },
+      {
+        "name": "박지은",
+        "gender": "여성",
+        "ageGroup": "30대",
+        "role": "조연",
+        "description": "수지의 딸. 어머니의 첫사랑 이야기를 통해 사랑의 의미를 깨닫는다.",
+        "relationshipToProtagonist": "수지의 딸"
+      }
+    ],
+    "structure": [
+      {
+        "act_number": 1,
+        "beat_type": "오프닝 이미지",
+        "title": "추억의 멜로디",
+        "description": "현재 철거 예정인 오래된 건물에서 '사랑하기 때문에'가 흘러나온다. 60대 민호가 옛 노래방 자리를 바라본다.",
+        "timestamp_label": "0-5분"
+      },
+      {
+        "act_number": 1,
+        "beat_type": "인큐어팅 인시던트",
+        "title": "1985년으로의 시간여행",
+        "description": "젊은 민호와 수지가 처음 만나는 1985년 대학교. 일본에서 체험한 가라오케 이야기로 시작되는 운명적 만남.",
+        "timestamp_label": "5-15분"
+      },
+      {
+        "act_number": 1,
+        "beat_type": "플롯 포인트 1",
+        "title": "노래방 창업 결심",
+        "description": "민호와 수지가 한국 최초 노래방 사업을 시작하기로 결심한다. 첫 투자금 마련과 장소 물색.",
+        "timestamp_label": "15-25분"
+      },
+      {
+        "act_number": 2,
+        "beat_type": "펀 앤 게임즈",
+        "title": "노래방의 황금시대",
+        "description": "1986년, 노래방이 대히트를 치며 두 사람의 사랑과 사업이 모두 번창한다. 행복한 시절의 몽타주.",
+        "timestamp_label": "25-40분"
+      },
+      {
+        "act_number": 2,
+        "beat_type": "미드포인트",
+        "title": "성공의 그림자",
+        "description": "사업 확장 과정에서 외부 투자자들이 개입하고, 민호와 수지 사이에 오해와 갈등이 시작된다.",
+        "timestamp_label": "40-50분"
+      },
+      {
+        "act_number": 2,
+        "beat_type": "플롯 포인트 2",
+        "title": "이별의 전주곡",
+        "description": "1988년, 사업권을 둘러싼 갈등과 집안의 반대로 두 사람이 결별한다. 수지가 떠나는 장면.",
+        "timestamp_label": "50-65분"
+      },
+      {
+        "act_number": 3,
+        "beat_type": "다크 나이트 오브 더 소울",
+        "title": "40년의 공백",
+        "description": "각자 다른 삶을 살아온 40년. 민호의 성공과 공허함, 수지의 평범하지만 의미있는 삶.",
+        "timestamp_label": "65-75분"
+      },
+      {
+        "act_number": 3,
+        "beat_type": "클라이맥스",
+        "title": "재회와 화해",
+        "description": "현재, 옛 노래방 자리에서 재회한 두 사람. 서로의 진심을 확인하고 과거의 오해를 푼다.",
+        "timestamp_label": "75-85분"
+      },
+      {
+        "act_number": 3,
+        "beat_type": "레졸루션",
+        "title": "새로운 시작",
+        "description": "늦은 사랑을 받아들이며 함께 새로운 노래방을 열어가는 두 사람. 자식들의 축복과 함께.",
+        "timestamp_label": "85-90분"
+      }
+    ],
+    "episodes": [],
+    "title_en": "FIRST LOVE KARAOKE"
+  },
+  "characters": []
+}

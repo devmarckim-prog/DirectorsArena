@@ -173,7 +173,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
 
-  const [masterMode, setMasterMode] = useState<'SCENARIO' | 'PRODUCTION'>('SCENARIO');
+  const [showInsights, setShowInsights] = useState(false);
+  const [activeTab, setActiveTab] = useState('BIBLE'); // Used for legacy sub-tabs
   const [scenarioTab, setScenarioTab] = useState<'BIBLE' | 'SIMILAR' | 'NAVIGATOR'>('BIBLE');
   const [productionTab, setProductionTab] = useState<'CASTING' | 'BUDGET' | 'BREAKDOWN' | 'PPL'>('CASTING');
   const [isCoWriterOpen, setIsCoWriterOpen] = useState(false);
@@ -235,6 +236,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     loadFromDB();
   }, [id]);
 
+  // ✅ v11.2: Auto-select Episode 1 & Scene 1 when Navigator is active
+  useEffect(() => {
+    if (scenarioTab === 'NAVIGATOR' && project) {
+      const dbEps = project.episodes || [];
+      const epCount = Number(project.episode_count || 0);
+      
+      if (!selectedEpisode) {
+        if (dbEps.length > 0) {
+          console.log("[ProjectPage] v11.2: Selecting first DB episode");
+          setSelectedEpisode(dbEps[0]);
+        } else if (epCount > 0 || project.episode_count) {
+          console.log("[ProjectPage] v11.2: Selecting placeholder EP 1");
+          setSelectedEpisode({
+            id: `placeholder-1`,
+            episode_number: 1,
+            title: "Episode 1",
+            summary: "",
+            script_content: null,
+          });
+        }
+      }
+    }
+  }, [project, selectedEpisode, scenarioTab]);
 
   const triggerStreaming = useCallback(async (projectId: string) => {
     setIsStreaming(true);
@@ -489,9 +513,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   {scenarioTab === 'SIMILAR' && <CompsTab projectId={project.id} hasSynopsis={isSynopsisReady} storedComps={project.similar_works} metadata={metadata} />}
                   {scenarioTab === 'NAVIGATOR' && (
                     <NavigatorTab 
-                      project={project} beats={project.story_beats} selectedEpisode={selectedEpisode} setSelectedEpisode={setSelectedEpisode} 
-                      handleGenerateEpisodeScript={handleGenerateEpisodeScript} generatingEpisodeId={generatingEpisodeId} 
-                      pendingDraft={pendingDraft} isGenerating={isGenerating} onSteer={handleSteerDraft} onAcceptDraft={handleAcceptDraft} onDiscardDraft={handleDiscardDraft} 
+                      project={{
+                        ...project,
+                        // v10.6: 데이터가 깨졌더라도 최소 6개는 강제로 보여줌 (테스트 및 긴급 복구)
+                        episode_count: Math.max(Number(project.episode_count || 0), 6)
+                      }}
+                      beats={project.story_beats} 
+                      selectedEpisode={selectedEpisode} 
+                      setSelectedEpisode={setSelectedEpisode} 
+                      handleGenerateEpisodeScript={handleGenerateEpisodeScript} 
+                      generatingEpisodeId={generatingEpisodeId} 
+                      pendingDraft={pendingDraft} 
+                      isGenerating={isGenerating} 
+                      onSteer={handleSteerDraft} 
+                      onAcceptDraft={handleAcceptDraft} 
+                      onDiscardDraft={handleDiscardDraft} 
                     />
                   )}
                 </motion.div>
@@ -547,6 +583,88 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             title="스토리 바이블 재생성" message="정말로 프로젝트를 재생성하시겠습니까? 현재의 시나리오와 에피소드가 모두 지워지고 새로운 서사가 집필됩니다."
             confirmText="집필 시작" variant="danger"
           />
+
+          {/* v11.13: System Insights Panel (Advanced Heartbeat) */}
+          <AnimatePresence>
+            {showInsights && (
+              <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[200] w-full max-w-2xl px-4">
+                <motion.div 
+                  initial={{ y: 50, opacity: 0, scale: 0.95 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 50, opacity: 0, scale: 0.95 }}
+                  className="bg-neutral-950/80 backdrop-blur-3xl border border-brand-gold/20 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ring-1 ring-white/5"
+                >
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-brand-gold animate-pulse" />
+                      <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">System Insights Mode</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest italic">Build V3.11.0</span>
+                      <div className="h-3 w-px bg-white/10" />
+                      <button 
+                        onClick={() => setShowInsights(false)}
+                        className="text-zinc-500 hover:text-white transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                      <p className="text-[7px] text-zinc-600 uppercase mb-1 font-black">Active Context</p>
+                      <p className="text-[10px] text-brand-gold font-bold truncate">
+                        {selectedEpisode ? `EP ${selectedEpisode.episode_number}` : "SELECT EPISODE"}
+                      </p>
+                    </div>
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                      <p className="text-[7px] text-zinc-600 uppercase mb-1 font-black">Beat Integrity</p>
+                      <p className="text-[10px] text-white/80 font-bold truncate">
+                        {pendingDraft ? "DRAFT ACTIVE" : selectedEpisode?.script_content ? "SCRIPT READY" : "AWAITING STORY"}
+                      </p>
+                    </div>
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                      <p className="text-[7px] text-zinc-600 uppercase mb-1 font-black">Structure Count</p>
+                      <p className="text-[10px] text-white font-bold">
+                        {project?.episode_count || 0} EPS / {project?.episodes?.length || 0} SYNCED
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="font-mono text-[9px] text-zinc-500 space-y-1.5 bg-black/60 p-3 rounded-xl border border-white/5 max-h-24 overflow-y-auto custom-scrollbar-gold">
+                    <div className="flex gap-2">
+                      <span className="text-zinc-700">[{new Date().toLocaleTimeString()}]</span>
+                      <p><span className="text-brand-gold">●</span> <span className="text-zinc-400">UI Thread:</span> Navigator Tab rendering with <span className="text-white">{project?.episode_count || "6"}</span> cards.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-zinc-700">[{new Date().toLocaleTimeString()}]</span>
+                      <p><span className="text-purple-400">●</span> <span className="text-zinc-400">Data Sync:</span> Metadata loaded from <span className="text-white">{metadata ? "Synopsis JSON" : "Local State"}</span>.</p>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* v11.13: Diagnostics Toggle Button */}
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[210]">
+            <button 
+              onClick={() => setShowInsights(!showInsights)}
+              className={cn(
+                "flex items-center gap-3 px-6 py-2.5 rounded-full border transition-all duration-500 group",
+                showInsights 
+                  ? "bg-brand-gold border-brand-gold text-black shadow-[0_0_30px_rgba(197,160,89,0.4)]" 
+                  : "bg-black/60 border-white/10 text-white/40 hover:border-brand-gold/50 hover:text-brand-gold backdrop-blur-xl"
+              )}
+            >
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full",
+                showInsights ? "bg-black animate-pulse" : "bg-brand-gold pulse-gold"
+              )} />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em]">Director's Heartbeat</span>
+            </button>
+          </div>
 
           <div className="fixed top-0 left-20 w-full h-full pointer-events-none z-0">
             <div className="absolute top-[5%] left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] bg-brand-gold/[0.04] blur-[250px] rounded-full" />

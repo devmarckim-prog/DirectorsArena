@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Character } from './nexus-types';
+import { Character, deriveNexusData } from './nexus-types';
 import { AntigravityLayoutEngine } from './nexus-layout';
 import { NexusNode } from './nexus-node';
 
@@ -25,12 +25,10 @@ export function NexusGraph({ characters, onSelectId, selectedId }: NexusGraphPro
     }
   }, [selectedId]);
   
-  // ✅ 2. 전문가 제안: 클릭 핸들러 메모이제이션 및 위치 최적화
   const handleNodeClick = useCallback((id: string) => {
     setSelectedNode(prev => {
       const newSelection = prev === id ? null : id;
       if (onSelectId) {
-        // ✅ 전문가 제안: 렌더 사이클 밖으로 호출 분리하여 안정성 확보
         setTimeout(() => onSelectId(newSelection || ""), 0);
       }
       return newSelection;
@@ -39,31 +37,30 @@ export function NexusGraph({ characters, onSelectId, selectedId }: NexusGraphPro
 
   const layoutEngine = useMemo(() => new AntigravityLayoutEngine(), []);
   
-  // ✅ 3. 데이터 전처리
-  const { normalizedChars, nameToId } = useMemo(() => {
-    const nameMap: Record<string, string> = {};
-    const processed = characters.map((c, i) => {
-      const id = c.id || c.name || `char-${i}`;
-      if (c.name) nameMap[c.name] = id;
-      return { ...c, id };
-    });
-    return { normalizedChars: processed, nameToId: nameMap };
+  // ✅ 3. 데이터 전처리 (deriveNexusData 적용)
+  const nexusData = useMemo(() => {
+    return deriveNexusData(characters);
   }, [characters]);
 
   // ✅ 4. 레이아웃 계산
   const { positions, zones } = useMemo(() => {
     try {
-      return layoutEngine.calculatePositions(normalizedChars as any);
+      return layoutEngine.calculatePositions(nexusData.characters as any);
     } catch (error) {
       console.error('❌ 레이아웃 계산 실패:', error);
       return { positions: {}, zones: [] };
     }
-  }, [normalizedChars, layoutEngine]);
+  }, [nexusData.characters, layoutEngine]);
   
+  // ✅ 연결선 계산
+  const connections = useMemo(() => {
+    return layoutEngine.calculateConnections(nexusData.relationships, positions);
+  }, [nexusData.relationships, positions, layoutEngine]);
+
   const protagonistId = useMemo(() => {
-    const sorted = [...normalizedChars].sort((a, b) => (b.importance ?? 1) - (a.importance ?? 1));
+    const sorted = [...nexusData.characters].sort((a, b) => (b.importance ?? 1) - (a.importance ?? 1));
     return sorted[0]?.id;
-  }, [normalizedChars]);
+  }, [nexusData.characters]);
 
   // ✅ 5. 렌더링
   return (
@@ -112,48 +109,70 @@ export function NexusGraph({ characters, onSelectId, selectedId }: NexusGraphPro
         
         {/* Connections */}
         <g id="connections-layer">
-          {normalizedChars.flatMap((char, cIdx) =>
-            (char.relations ?? []).map((rel, rIdx) => {
-              const fromPos = positions[char.id];
-              const targetId = nameToId[rel.target] || rel.target;
-              const toPos = positions[targetId];
-              
-              if (!fromPos || !toPos) return null;
-
-              const isHighlighted = !selectedNode || selectedNode === char.id || selectedNode === targetId;
-              const mx = (fromPos.x + toPos.x) / 2;
-              const my = (fromPos.y + toPos.y) / 2 - 60;
-              
-              const stroke =
-                rel.type.toLowerCase() === 'enemy'  ? '#ff006e' :
-                rel.type.toLowerCase() === 'ally'   ? '#06ffa5' :
-                rel.type.toLowerCase() === 'family' ? '#8b5cf6' : '#ffbe0b';
-
-              return (
+          {connections.map((conn, i) => {
+            const isHighlighted = 
+              !selectedNode || 
+              conn.from === selectedNode || 
+              conn.to === selectedNode;
+            
+            const isHovered =
+              hoveredNode === conn.from ||
+              hoveredNode === conn.to;
+            
+            return (
+              <g key={`conn-${conn.from}-${conn.to}-${i}`}>
                 <motion.path
-                  key={`rel-${char.id}-${targetId}-${rIdx}`}
-                  d={`M ${fromPos.x} ${fromPos.y} Q ${mx} ${my} ${toPos.x} ${toPos.y}`}
-                  stroke={stroke} strokeWidth={rel.strength ? Math.max(1, rel.strength * 0.3) : 1.2}
-                  strokeDasharray={rel.type.toLowerCase() === 'enemy' ? '6,4' : 'none'}
-                  fill="none" initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: isHighlighted ? 0.6 : 0.05 }}
+                  d={conn.path}
+                  stroke={conn.color}
+                  strokeWidth={conn.strokeWidth}
+                  strokeDasharray={conn.dashArray}
+                  fill="none"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: isHighlighted ? conn.opacity : 0.05 }}
                   transition={{ duration: 1 }}
                 />
-              );
-            })
-          )}
+                
+                {/* ✅ 관계 설명 라벨 (호버 시 표시) */}
+                {isHovered && conn.description && (
+                  <g>
+                    <rect
+                      x={(positions[conn.from].x + positions[conn.to].x) / 2 - 80}
+                      y={(positions[conn.from].y + positions[conn.to].y) / 2 - 20}
+                      width="160"
+                      height="36"
+                      fill="rgba(10, 10, 15, 0.95)"
+                      stroke={conn.color}
+                      strokeWidth="1.5"
+                      rx="6"
+                    />
+                    <text
+                      x={(positions[conn.from].x + positions[conn.to].x) / 2}
+                      y={(positions[conn.from].y + positions[conn.to].y) / 2}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#fff"
+                      fontSize="11"
+                      fontFamily="var(--font-body, -apple-system, sans-serif)"
+                    >
+                      {conn.description}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
         </g>
 
         {/* Nodes */}
         <g id="nodes-layer">
-          {normalizedChars.map((char, index) => {
+          {nexusData.characters.map((char, index) => {
             const pos = positions[char.id];
             if (!pos) return null;
             return (
               <NexusNode
                 key={`node-${char.id}`}
                 index={index}
-                character={char}
+                character={char as any}
                 position={pos}
                 isSelected={selectedNode === char.id}
                 isHovered={hoveredNode === char.id}
@@ -167,30 +186,33 @@ export function NexusGraph({ characters, onSelectId, selectedId }: NexusGraphPro
         </g>
       </svg>
 
-      {/* ✅ 전문가 제안: 범례 가독성 대폭 강화 (크기 확대) */}
+      {/* ✅ 범례 개선 (관계 타입별) */}
       <div style={{ 
         position: 'absolute', bottom: 30, left: 30, 
         background: 'rgba(10, 10, 15, 0.85)', backdropFilter: 'blur(12px)', 
         border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '10px', 
         padding: '14px 20px', fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', 
-        zIndex: 50, display: 'flex', gap: '25px',
+        zIndex: 50, display: 'flex', flexDirection: 'column', gap: '8px',
         boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
       }}>
-        {[
-          { label: 'ENEMY', color: '#ff006e', dash: true }, 
-          { label: 'ALLY', color: '#06ffa5', dash: false }, 
-          { label: 'FAMILY', color: '#8b5cf6', dash: false }
-        ].map(item => (
-          <div key={item.label} style={{ color: item.color, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ 
-              width: 20, height: 3, 
-              background: item.color, 
-              borderBottom: item.dash ? `1.5px dashed ${item.color}` : 'none',
-              borderRadius: '2px'
-            }} />
-            {item.label}
-          </div>
-        ))}
+        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginBottom: '4px', letterSpacing: '1px' }}>관계 유형</div>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          {[
+            { label: '첫사랑/연인', color: '#ff006e', dash: 'none', width: 3 }, 
+            { label: '가족', color: '#a78bfa', dash: 'none', width: 2.5 }, 
+            { label: '절친', color: '#06ffa5', dash: '6 3', width: 2 },
+            { label: '멘토', color: '#ffbe0b', dash: '4 2', width: 2 },
+            { label: '동맹', color: '#06ffa5', dash: 'none', width: 1.5 },
+            { label: '적대', color: '#ff4444', dash: '8 4', width: 2 },
+          ].map(item => (
+            <div key={item.label} style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="24" height="10">
+                <line x1="0" y1="5" x2="24" y2="5" stroke={item.color} strokeWidth={item.width} strokeDasharray={item.dash} />
+              </svg>
+              <span style={{ fontSize: '11px', opacity: 0.9 }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
