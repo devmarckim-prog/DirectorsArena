@@ -12,7 +12,7 @@ interface SceneCoWriterProps {
     draftTitle: string;
     sceneElements: any[];
   } | null;
-  onAccept: () => void;
+  onAccept: (filteredElements?: any[]) => void;
   onDiscard: () => void;
 }
 
@@ -24,12 +24,33 @@ export function SceneCoWriter({
   onDiscard,
 }: SceneCoWriterProps) {
   const [instruction, setInstruction] = useState("");
+  const [rejectedIndices, setRejectedIndices] = useState<Set<number>>(new Set());
+
+  // Reset rejected indices when a new draft comes in
+  React.useEffect(() => {
+    setRejectedIndices(new Set());
+  }, [pendingDraft]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!instruction.trim() || isGenerating) return;
     onSteer(instruction);
     setInstruction("");
+  };
+
+  const toggleReject = (idx: number) => {
+    setRejectedIndices(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const handleAccept = () => {
+    if (!pendingDraft) return;
+    const filtered = pendingDraft.sceneElements.filter((_, i) => !rejectedIndices.has(i));
+    onAccept(filtered);
   };
 
   return (
@@ -71,24 +92,41 @@ export function SceneCoWriter({
                 <h4 className="text-white font-bold text-lg mb-4 tracking-tighter uppercase italic">{pendingDraft.draftTitle}</h4>
                 
                 <div className="space-y-3">
-                  {pendingDraft.sceneElements.map((el, idx) => (
-                    <div key={idx} className={cn(
-                      "text-[11px] leading-relaxed",
-                      el.type === 'HEADING' ? "text-brand-gold font-black uppercase mt-4" :
-                      el.type === 'CHARACTER' ? "text-white font-bold uppercase text-center mt-3" :
-                      el.type === 'DIALOGUE' ? "text-neutral-300 text-center px-8" :
-                      el.type === 'PARENTHETICAL' ? "text-neutral-500 italic text-center text-[10px]" :
-                      "text-neutral-400"
-                    )}>
-                      {el.type === 'CHARACTER' ? el.characterName : ""}
-                      {el.content}
-                    </div>
-                  ))}
+                  {pendingDraft.sceneElements.map((el, idx) => {
+                    const isRejected = rejectedIndices.has(idx);
+                    return (
+                      <div key={idx} className="group relative flex items-start gap-2">
+                        <button 
+                          onClick={() => toggleReject(idx)}
+                          className={cn(
+                            "mt-1 p-1 rounded-full border transition-colors opacity-0 group-hover:opacity-100",
+                            isRejected ? "bg-red-500/20 border-red-500 text-red-500" : "border-white/20 text-neutral-500 hover:text-white"
+                          )}
+                          title={isRejected ? "Restore" : "Reject"}
+                        >
+                          <X size={10} />
+                        </button>
+                        <div className={cn(
+                          "flex-1 text-[11px] leading-relaxed transition-all duration-300",
+                          isRejected ? "line-through opacity-30 text-red-400" : (
+                            el.type === 'HEADING' ? "text-brand-gold font-black uppercase mt-4" :
+                            el.type === 'CHARACTER' ? "text-white font-bold uppercase text-center mt-3" :
+                            el.type === 'DIALOGUE' ? "text-neutral-300 text-center px-8" :
+                            el.type === 'PARENTHETICAL' ? "text-neutral-500 italic text-center text-[10px]" :
+                            "text-neutral-400"
+                          )
+                        )}>
+                          {el.type === 'CHARACTER' ? el.characterName : ""}
+                          {el.content}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="mt-8 flex gap-3">
                   <button 
-                    onClick={onAccept}
+                    onClick={handleAccept}
                     className="flex-1 bg-brand-gold text-black font-black text-[10px] py-3 rounded-full uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
                   >
                     <Check size={14} /> Accept Draft

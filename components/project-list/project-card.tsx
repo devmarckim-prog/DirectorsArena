@@ -11,13 +11,68 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-const FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1478720568477-151d9b1b746d?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1542204172-3f241327663f?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1505686994434-e3cc5abf1330?auto=format&fit=crop&q=80&w=800"
-];
+// 장르별 이미지 맵 (각 2개, 총 20개)
+const GENRE_IMAGE_MAP: Record<string, string[]> = {
+  romance: [
+    "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1516589091380-5d8e87df6999?auto=format&fit=crop&q=80&w=800",
+  ],
+  horror: [
+    "https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1572544656882-6b0b30c51e38?auto=format&fit=crop&q=80&w=800",
+  ],
+  fantasy: [
+    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&q=80&w=800",
+  ],
+  noir: [
+    "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&q=80&w=800",
+  ],
+  business: [
+    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800",
+  ],
+  historical: [
+    "https://images.unsplash.com/photo-1551029506-0807df4e2031?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1548407260-da850faa41e3?auto=format&fit=crop&q=80&w=800",
+  ],
+  comedy: [
+    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80&w=800",
+  ],
+  scifi: [
+    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=800",
+  ],
+  mystery: [
+    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?auto=format&fit=crop&q=80&w=800",
+  ],
+  action: [
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=800",
+  ],
+};
+
+// 장르 키워드 → 이미지 맵 키 매핑
+function resolveGenreKey(genreOrPlatform: string): string | null {
+  const g = (genreOrPlatform || '').toLowerCase();
+  if (/로맨스|romance|멜로|melo|love/.test(g)) return 'romance';
+  if (/공포|horror|스릴러|thriller/.test(g)) return 'horror';
+  if (/판타지|fantasy|무협|wuxia/.test(g)) return 'fantasy';
+  if (/누아르|noir|범죄|crime/.test(g)) return 'noir';
+  if (/비즈니스|business|기업|직장|office/.test(g)) return 'business';
+  if (/사극|historical|시대|조선|역사/.test(g)) return 'historical';
+  if (/코미디|comedy|시트콤|sitcom/.test(g)) return 'comedy';
+  if (/sf|sci.fi|공상과학|우주|space|cyber/.test(g)) return 'scifi';
+  if (/미스터리|mystery|추리|detective/.test(g)) return 'mystery';
+  if (/액션|action/.test(g)) return 'action';
+  return null;
+}
+
+// 전체 이미지 풀 (장르 매칭 실패 시 fallback)
+const ALL_IMAGES = Object.values(GENRE_IMAGE_MAP).flat();
 
 export interface Project {
   id: string | number;
@@ -40,11 +95,11 @@ export interface Project {
 
 export function ProjectCard({ 
   project, 
-  systemImages = [],
+  genreImages = {},
   onDelete 
 }: { 
   project: Project;
-  systemImages?: any[];
+  genreImages?: Record<string, string[]>;
   onDelete?: (id: string | number) => void;
 }) {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -63,28 +118,45 @@ export function ProjectCard({
   }, [project.synopsis]);
 
   const displayImage = useMemo(() => {
+    // 1. 프로젝트에 직접 이미지가 있으면 우선 사용
     if (project.image && !project.image.includes('placeholder')) return project.image;
     if (meta?.image) return meta.image;
-    
+
+    // 2. 장르 매칭: DB 이미지 우선, 코드 상수 fallback
+    const genreStr = `${project.genre || ''} ${project.platform || ''}`;
+    const genreKey = resolveGenreKey(genreStr);
+
+    // ID 해시 (항상 동일한 이미지 보장)
     const idStr = String(project.id);
     let hash = 0;
-    for (let i = 0; i < idStr.length; i++) {
-        hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < idStr.length; i++) hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
+    const absHash = Math.abs(hash);
+
+    if (genreKey) {
+      // DB 이미지 우선
+      const dbPool = genreImages[genreKey];
+      if (dbPool && dbPool.length > 0) return dbPool[absHash % dbPool.length];
+      // 코드 상수 fallback
+      const codePool = GENRE_IMAGE_MAP[genreKey];
+      if (codePool && codePool.length > 0) return codePool[absHash % codePool.length];
     }
-    const idx = Math.abs(hash);
-    
-    if (systemImages && systemImages.length > 0) {
-      return systemImages[idx % systemImages.length].url;
-    }
-    return FALLBACK_IMAGES[idx % FALLBACK_IMAGES.length];
-  }, [project.id, project.image, meta, systemImages]);
+
+    // 3. 장르 미매칭 → 전체 DB 풀 혹은 코드 풀
+    const allDbImages = Object.values(genreImages).flat();
+    if (allDbImages.length > 0) return allDbImages[absHash % allDbImages.length];
+    return ALL_IMAGES[absHash % ALL_IMAGES.length];
+  }, [project.id, project.image, project.genre, project.platform, meta, genreImages]);
 
   const displayTitle = project.title || meta?.title || meta?.story?.title || "Untitled Project";
   const displayLogline = project.logline || meta?.formData?.logline || meta?.logline || meta?.story?.logline || "No logline available.";
   
-  const isBaking = !project.is_sample && (project.status === 'BAKING' || project.status === 'ERROR');
+  const isDone = project.status === 'READY' || project.status === 'COMPLETED' || (project.progress ?? 0) >= 100;
 
-  const isLocked = !project.is_sample && project.status !== 'READY' && project.progress < 80;
+  const isBaking = !project.is_sample && 
+    (project.status === 'BAKING' || project.status === 'ERROR') &&
+    !isDone;
+
+  const isLocked = !project.is_sample && !isDone && (project.progress ?? 0) < 80;
 
   const handleCardClick = () => {
     if (isLocked) return;

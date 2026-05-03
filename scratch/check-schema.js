@@ -1,21 +1,32 @@
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+async function check() {
+  const envFile = fs.readFileSync('.env.local', 'utf8');
+  const env = {};
+  envFile.split('\n').forEach(line => {
+    const [key, ...vals] = line.split('=');
+    if (key) env[key.trim()] = vals.join('=').trim();
+  });
+  const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
-const supabaseUrl = 'https://stfonaiuxavzbqwikcqb.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0Zm9uYWl1eGF2emJxd2lrY3FiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDMyNjcwMCwiZXhwIjoyMDg5OTAyNzAwfQ._g-OZFUnWxQrbuwNTmqyAduudYciX7vP4piq9xiHwgM';
-const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data, error } = await supabase
+    .from('story_beats_v2')
+    .insert({ 
+      project_id: '142231a4-ede6-4cd1-a8e1-478757c01faf', 
+      act_number: 1, 
+      beat_type: 'Scene',
+      title: 'TEST',
+      description: 'test',
+      order_index: 0
+    })
+    .select();
 
-async function checkSchema() {
-  const { data, error } = await supabase.from('characters_v2').select('*').limit(1);
   if (error) {
-    console.error(error);
+    console.log('Insert error:', error.message);
   } else {
-    if (data && data.length > 0) {
-      console.log('Columns:', Object.keys(data[0]));
-    } else {
-      // Try to insert a dummy to get schema error or check
-      const { error: insErr } = await supabase.from('characters_v2').insert([{ project_id: '142231a4-ede6-4cd1-a8e1-478757c01faf' }]);
-      console.log('Insert error msg to infer schema:', insErr);
-    }
+    console.log('✅ 실제 컬럼 목록:', JSON.stringify(Object.keys(data[0]), null, 2));
+    await supabase.from('story_beats_v2').delete().eq('id', data[0].id);
+    console.log('🧹 테스트 행 삭제 완료');
   }
 }
-checkSchema();
+check();

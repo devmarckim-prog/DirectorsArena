@@ -1,23 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BackgroundPaths } from "@/components/ui/background-paths";
-import { Database, ShieldAlert, LayoutDashboard, Film, Skull, Trash2, Settings, Loader2 } from "lucide-react";
+import { Database, ShieldAlert, LayoutDashboard, Film, Skull, Trash2, Settings, Loader2, Layers } from "lucide-react";
 import {
   fetchProjectsAction, fetchAdminStatsAction, deleteProjectAction,
   purgeAllProjectsAction, getAdminSettingsAction, updateAdminSettingsAction,
   resetPromptsToDefaultAction, insertSampleProjectsAction, updateProjectAction
 } from "@/app/actions";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { X, Save, Edit3 } from "lucide-react";
+import { SchemaFieldDesigner } from "@/components/admin/schema-field-designer";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
-export default function AdminDashboardPage() {
+function AdminDashboardPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'scripts' | 'prompts'>('dashboard');
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get('tab') as 'dashboard' | 'scripts' | 'prompts' | 'schema') || 'dashboard';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'scripts' | 'prompts' | 'schema'>(initialTab);
+
+  const handleTabChange = (tab: 'dashboard' | 'scripts' | 'prompts' | 'schema') => {
+    setActiveTab(tab);
+    router.replace(`/admin?tab=${tab}`, { scroll: false });
+  };
   const [projects, setProjects] = useState<any[]>([]);
   const [stats, setStats] = useState<{ total: number; today: number; completed: number; costUsd: string; episodeCount: number; dailyCosts: { date: string; cost: number }[] }>({ 
     total: 0, today: 0, completed: 0, costUsd: "0.00", episodeCount: 0, dailyCosts: [] 
@@ -69,7 +77,7 @@ export default function AdminDashboardPage() {
         console.log("Admin: Deletion successful");
         await loadAllData();
       } else {
-        alert("삭제 실패: " + res.error);
+        alert("??�� ?�패: " + res.error);
       }
     } catch (err) {
       console.error("Deletion error:", err);
@@ -137,9 +145,9 @@ export default function AdminDashboardPage() {
       if (result.success) {
         setIsEditModalOpen(false);
         await loadAllData();
-        alert("프로젝트 수정 사항이 저장되었습니다.");
+        alert("?�로?�트 ?�정 ?�항???�?�되?�습?�다.");
       } else {
-        alert("수정 실패: " + result.error);
+        alert("?�정 ?�패: " + result.error);
       }
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -149,12 +157,12 @@ export default function AdminDashboardPage() {
   };
 
   const handlePurgeAll = async () => {
-    const code = prompt("모든 프로젝트를 삭제합니다. 동의하시면 'DELETE ALL'을 입력하세요.");
+    const code = prompt("모든 ?�로?�트�???��?�니?? ?�의?�시�?'DELETE ALL'???�력?�세??");
     if (code === "DELETE ALL") {
       setLoading(true);
       await purgeAllProjectsAction();
       await loadAllData();
-      alert("전체 데이터베이스가 초기화 되었습니다.");
+      alert("?�체 ?�이?�베?�스가 초기???�었?�니??");
     }
   };
 
@@ -175,7 +183,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleResetDefaults = async () => {
-    if (!confirm("모든 시스템 프롬프트를 공장 초기화하시겠습니까?")) return;
+    if (!confirm("모든 ?�스???�롬?�트�?공장 초기?�하?�겠?�니�?")) return;
     setIsSaving(true);
     const res = await resetPromptsToDefaultAction();
     if (res.success) {
@@ -229,13 +237,16 @@ export default function AdminDashboardPage() {
             </div>
 
             <nav className="flex flex-col space-y-2">
-              <button onClick={() => setActiveTab('dashboard')} className={tabClass('dashboard')}>
+              <button onClick={() => handleTabChange('dashboard')} className={tabClass('dashboard')}>
                 <LayoutDashboard size={16} /><span>Dashboard</span>
               </button>
-              <button onClick={() => setActiveTab('scripts')} className={tabClass('scripts')}>
+              <button onClick={() => handleTabChange('scripts')} className={tabClass('scripts')}>
                 <Film size={16} /><span>Project List</span>
               </button>
-              <button onClick={() => setActiveTab('prompts')} className={tabClass('prompts')}>
+              <button onClick={() => handleTabChange('schema')} className={tabClass('schema')}>
+                <Layers size={16} /><span>Schema Fields</span>
+              </button>
+              <button onClick={() => handleTabChange('prompts')} className={tabClass('prompts')}>
                 <Settings size={16} /><span>Models & Prompts</span>
               </button>
             </nav>
@@ -486,6 +497,13 @@ export default function AdminDashboardPage() {
               </motion.div>
             )}
 
+            {/* SCHEMA FIELDS TAB */}
+            {activeTab === 'schema' && settings && (
+              <motion.div key="schema" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <SchemaFieldDesigner initialFields={settings.schema_fields || {}} />
+              </motion.div>
+            )}
+
           </AnimatePresence>
         </section>
       </main>
@@ -610,7 +628,7 @@ export default function AdminDashboardPage() {
               </div>
               <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-4">Excision Protocol</h2>
               <p className="text-sm text-neutral-400 mb-10 leading-relaxed">
-                정말 이 프로젝트를 영구적으로 말소하시겠습니까?<br />
+                ?�말 ???�로?�트�??�구?�으�?말소?�시겠습?�까?<br />
                 <span className="text-red-500/60 font-mono text-[10px]">Warning: This action is irreversible.</span>
               </p>
               <div className="flex flex-col space-y-3">
@@ -632,5 +650,12 @@ export default function AdminDashboardPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+export default function AdminDashboardPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-950" />}>
+      <AdminDashboardPage />
+    </Suspense>
   );
 }

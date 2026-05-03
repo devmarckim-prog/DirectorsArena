@@ -66,7 +66,7 @@ export async function createProjectAction(formData: any) {
         role: char.role,
         description: char.description,
         gender: char.gender || 'OTHER',
-        age_group: char.ageGroup || '30S',
+        age: parseInt((char.age || char.ageGroup || char.age_group || "").toString().match(/\d+/)?.[0] || "0"),
         relationship_to_protagonist: char.relationshipToProtagonist || '',
         groups: char.groups || []
       }));
@@ -105,16 +105,32 @@ export async function fetchProjectsAction() {
 
 export async function fetchProjectDetailsAction(id: string) {
   const supabase = createAdminClient();
-  const { data: project } = await supabase.from('projects_v2').select('*').eq('id', id).single();
-  if (!project) return null;
+  const { data: project, error: projError } = await supabase
+    .from('projects_v2')
+    .select('id, title, genre, platform, duration, world, logline, status, progress, synopsis, created_at')
+    .eq('id', id)
+    .single();
+  if (!project || projError) {
+    console.error('[fetchProjectDetailsAction] project not found:', projError?.message);
+    return null;
+  }
 
   const { data: characters } = await supabase.from('characters_v2').select('*').eq('project_id', id);
   const { data: scenes } = await supabase.from('scenes_v2').select('*').eq('project_id', id).order('scene_number', { ascending: true });
-  const { data: episodes } = await supabase.from('episodes_v2').select('*').eq('project_id', id).order('episode_number', { ascending: true });
+  const { data: episodes, error: epError } = await supabase
+    .from('episodes_v2')
+    .select('*, story_beats_v2(*)')
+    .eq('project_id', id)
+    .order('episode_number', { ascending: true });
+
+  if (epError) {
+    console.error('[fetchProjectDetailsAction] episodes_v2 join error:', epError.message);
+  }
+
   const { data: storyBeats } = await supabase.from('story_beats_v2').select('*').eq('project_id', id).order('order_index', { ascending: true });
 
   // v9.8: Decouple title and subtitle
-  let synopsis = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
+  const synopsis = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
   const subtitle = synopsis?.title_en || project.title?.split(/[()]/)[1]?.trim();
   const mainTitle = project.title?.split(/[()]/)[0]?.trim();
 
@@ -124,10 +140,27 @@ export async function fetchProjectDetailsAction(id: string) {
     .select('*')
     .eq('project_id', id);
 
+  // v11.32: Compute episode_count (column doesn't exist in DB — derive it)
+  let synopsisEpCount = 0;
+  try {
+    const synObj = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
+    synopsisEpCount = Number(
+      synObj?.formData?.episodes ||
+      synObj?.episodes?.length ||
+      synObj?.story?.episodeCount ||
+      0
+    );
+  } catch { /* ignore */ }
+
+  const actualEpisodeCount = episodes?.length || 0;
+  const resolvedEpCount = synopsisEpCount || actualEpisodeCount || 8;
+  console.log(`[fetchProjectDetailsAction] episode_count: synopsis=${synopsisEpCount}, actual=${actualEpisodeCount} → ${resolvedEpCount}`);
+
   return { 
     ...project, 
     title: mainTitle,
     subtitle: subtitle,
+    episode_count: resolvedEpCount,
     characters: characters || [], 
     scenes: scenes || [], 
     episodes: episodes || [], 
@@ -144,7 +177,7 @@ export async function updateProjectAction(id: string, updates: { title?: string,
     if (updates.subtitle !== undefined || updates.title !== undefined) {
       const { data: project } = await supabase.from('projects_v2').select('title, synopsis').eq('id', id).single();
       if (project) {
-        let synopsis = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
+        const synopsis = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
         
         if (updates.subtitle !== undefined) {
           synopsis.title_en = updates.subtitle;
@@ -233,10 +266,48 @@ export async function fetchSimilarWorksAction(projectId: string) {
   return data || [];
 }
 
+// ★ 페이지네이션: offset 기준 PAGE_SIZE개 반환
+const SIMILAR_WORKS_PAGE_SIZE = 4;
+
+export async function fetchSimilarWorksPageAction(
+  projectId: string,
+  offset: number = 0
+): Promise<{ data: any[]; total: number; hasMore: boolean }> {
+  const supabase = createAdminClient();
+  const limit = SIMILAR_WORKS_PAGE_SIZE;
+
+  const { data, error, count } = await supabase
+    .from('similar_contents')
+    .select('*', { count: 'exact' })
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error('[fetchSimilarWorksPageAction] error:', error.message);
+    return { data: [], total: 0, hasMore: false };
+  }
+
+  const total = count ?? 0;
+  return {
+    data: data || [],
+    total,
+    hasMore: offset + limit < total,
+  };
+}
+
 export async function updateCharacterAction(id: string, updates: any, projectId?: string) {
   try {
     const supabase = createAdminClient();
     
+    console.log(`[updateCharacterAction] Updating character ${id} with:`, updates);
+
+    // Standardize: If exact age is provided, remove categorical age groups to avoid shadowing
+    if (updates.age && updates.age > 0) {
+      (updates as any).ageGroup = null;
+      (updates as any).age_group = null;
+    }
+
     // 1. Try updating normalized table first
     const { data: normalizedChar, error: nError } = await supabase
       .from('characters_v2')
@@ -246,8 +317,13 @@ export async function updateCharacterAction(id: string, updates: any, projectId?
       .single();
 
     if (!nError && normalizedChar) {
+      console.log(`[updateCharacterAction] Successfully updated characters_v2 for ${id}`);
       revalidatePath(`/project-contents/${normalizedChar.project_id}`);
       return { success: true };
+    }
+    
+    if (nError) {
+      console.warn(`[updateCharacterAction] characters_v2 update failed or character not found: ${nError.message}`);
     }
 
     // 2. Fallback: Update within projects_v2.synopsis (and track history)
@@ -256,7 +332,7 @@ export async function updateCharacterAction(id: string, updates: any, projectId?
       const { data: allProjects } = await supabase.from('projects_v2').select('id, synopsis');
       for (const p of (allProjects || [])) {
         const syn = typeof p.synopsis === 'string' ? JSON.parse(p.synopsis) : p.synopsis;
-        if (syn?.characters?.some((c: any) => c.id === id || c.name === id)) {
+        if (syn?.characters?.some((c: any) => c.id === id || c.name === id || c.name === characterName)) {
           projectId = p.id;
           break;
         }
@@ -266,12 +342,21 @@ export async function updateCharacterAction(id: string, updates: any, projectId?
     if (projectId) {
       const { data: project } = await supabase.from('projects_v2').select('synopsis').eq('id', projectId).single();
       if (project) {
-        let synopsis = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
+        const synopsis = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
         if (synopsis.characters) {
-          const charIdx = synopsis.characters.findIndex((c: any) => c.id === id || c.name === id);
+          // Match by ID OR Name for maximum robustness
+          const charIdx = synopsis.characters.findIndex((c: any) => 
+            c.id === id || c.name === id || c.name === characterName
+          );
           if (charIdx > -1) {
             const oldChar = { ...synopsis.characters[charIdx] };
             const newChar = { ...oldChar, ...updates };
+            
+            // Standardize: If exact age is provided, remove categorical age groups
+            if (updates.age && updates.age > 0) {
+              delete newChar.ageGroup;
+              delete newChar.age_group;
+            }
             
             // Apply Update
             synopsis.characters[charIdx] = newChar;

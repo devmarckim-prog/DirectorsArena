@@ -157,17 +157,23 @@ export function StepFour({ formData, setFormData, onProduce }: StepFourProps) {
           secret: "He is laundering money through the construction department."
         }
       ];
-      setFormData({ ...formData, characters: aiChars });
-      setIsWeaving(false);
-      setCharMode("manual");
     }, 2000);
   };
 
+  const handleModeToggle = (mode: "ai" | "manual") => {
+    setCharMode(mode);
+  };
+
+  const handleAddCharacter = () => {
+    setCharMode("manual");
+    addEmptyCharacter();
+  };
+
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col space-y-16 pb-32">
+    <div className="w-full flex flex-col space-y-16 pb-32">
       {/* 2. Character Studio: Multi-Soul */}
       <section className="space-y-16">
-        <div className="w-full flex justify-between items-end mb-12 px-2">
+        <div className="w-full flex justify-between items-end mb-12">
           <div className="text-left">
             <motion.h2 
               className="text-4xl sm:text-5xl font-black text-white mb-1 tracking-tighter"
@@ -181,144 +187,92 @@ export function StepFour({ formData, setFormData, onProduce }: StepFourProps) {
               Architect of the Protagonists
             </p>
           </div>
-          <div className="pb-2">
-            <CircularProgress currentCount={formData.characters.length} maxCount={4} size={56} strokeWidth={4} />
-          </div>
-        </div>
-
-        {/* Mode Toggle */}
-        <div className="flex justify-center">
-          <div className="flex p-1.5 bg-neutral-900/60 rounded-full border border-white/5 backdrop-blur-2xl shadow-2xl">
-            {[ 
-              { id: "ai", label: "AI Weaver", icon: Sparkles }, 
-              { id: "manual", label: "Manual Author", icon: PencilLine } 
-            ].map((mode) => (
-              <button
-                key={mode.id}
-                onClick={() => setCharMode(mode.id as any)}
-                className={cn(
-                  "px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center space-x-3",
-                  charMode === mode.id ? "bg-brand-gold text-black shadow-[0_0_30px_rgba(197,160,89,0.3)]" : "text-neutral-600 hover:text-white"
-                )}
-              >
-                <mode.icon size={14} strokeWidth={2.5} />
-                <span>{mode.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Multi-Soul Grid */}
-        <AnimatePresence mode="wait">
-          {charMode === "manual" ? (
-            <motion.div 
-              key="manual" 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              className="space-y-12"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {formData.characters.map((char: any, idx: number) => (
-                  <CharacterCard 
-                    key={char.id || idx}
-                    character={char}
-                    allCharacters={formData.characters}
-                    onUpdate={(updates) => updateCharacter(idx, updates)}
-                    onRemove={() => removeCharacter(idx)}
-                  />
-                ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {/* AI Auto Generation Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "h-[380px] rounded-[2.5rem] border transition-all duration-500 flex flex-col items-center justify-center space-y-6 relative overflow-hidden group cursor-pointer",
+              charMode === "ai" 
+                ? "bg-brand-gold/10 border-brand-gold shadow-[0_0_50px_rgba(197,160,89,0.15)]" 
+                : "bg-neutral-900/40 border-white/5 grayscale"
+            )}
+            onClick={() => handleModeToggle("ai")}
+          >
+            {/* Checkbox UI */}
+            <div className={cn(
+              "absolute top-6 right-6 w-8 h-8 rounded-xl border transition-all duration-500 flex items-center justify-center",
+              charMode === "ai" 
+                ? "bg-brand-gold border-brand-gold shadow-[0_0_20px_rgba(197,160,89,0.4)]" 
+                : "border-white/10 bg-black/20"
+            )}>
+              <Sparkles size={charMode === "ai" ? 14 : 12} className={cn(
+                "transition-all",
+                charMode === "ai" ? "text-black scale-110" : "text-neutral-700"
+              )} />
+            </div>
 
-                {formData.characters.length < 4 && (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={addEmptyCharacter}
-                    className="h-[380px] rounded-[2.5rem] border-2 border-dashed border-white/5 hover:border-brand-gold/40 hover:bg-brand-gold/5 transition-all flex flex-col items-center justify-center space-y-4 group"
-                  >
-                    <div className="p-4 rounded-2xl bg-neutral-900 group-hover:bg-brand-gold group-hover:text-black transition-all">
-                       <Plus size={28} strokeWidth={2.5} />
-                    </div>
-                    <span className="text-[10px] font-black text-neutral-600 group-hover:text-brand-gold uppercase tracking-[0.4em]">Add New Soul</span>
-                  </motion.button>
-                )}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="ai"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="py-32 text-center rounded-[4rem] border border-brand-gold/10 bg-neutral-950/20 backdrop-blur-xl relative overflow-hidden group"
-            >
-              {/* AI Looming Animation Placeholder */}
-              <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-                 <motion.div 
-                   animate={{ rotate: 360 }} 
-                   transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                   className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(197,160,89,0.08)_180deg,transparent_360deg)] rounded-full blur-3xl opacity-50" 
-                 />
-                 
-                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <motion.path
-                      d="M -10 50 Q 25 30 50 50 T 110 50"
-                      stroke="#C5A059"
-                      strokeWidth="0.1"
-                      fill="none"
-                      animate={{ 
-                        d: [
-                          "M -10 50 Q 25 30 50 50 T 110 50", 
-                          "M -10 50 Q 25 70 50 50 T 110 50", 
-                          "M -10 50 Q 25 30 50 50 T 110 50"
-                        ],
-                        opacity: [0.3, 0.6, 0.3]
-                      }}
-                      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                 </svg>
-              </div>
+            <div className={cn(
+              "p-6 rounded-[2rem] transition-all duration-500",
+              charMode === "ai" ? "bg-brand-gold text-black scale-110" : "bg-neutral-800 text-neutral-600"
+            )}>
+              <Sparkles size={32} strokeWidth={2.5} />
+            </div>
+            <div className="text-center">
+              <h3 className={cn(
+                "text-lg font-black uppercase tracking-[0.2em] mb-2",
+                charMode === "ai" ? "text-white" : "text-neutral-500"
+              )}>AI 자동 생성</h3>
+              <p className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest italic">Narrative Weaver Engine</p>
+            </div>
+            
+            {charMode === "ai" && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute bottom-10 px-8 text-center"
+              >
+                <span className="text-[10px] font-black text-brand-gold uppercase tracking-[0.3em] animate-pulse">Active Protocol</span>
+              </motion.div>
+            )}
+          </motion.div>
 
-              <div className="relative z-10">
-                <motion.div 
-                   initial={{ scale: 0.8, opacity: 0 }}
-                   animate={{ scale: 1, opacity: 1 }}
-                   className="w-24 h-24 bg-brand-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-10 border border-brand-gold/20 relative group-hover:border-brand-gold/40 transition-colors shadow-2xl overflow-hidden"
-                >
-                   <div className="absolute inset-0 bg-brand-gold/5 animate-pulse" />
-                   <Wand2 className={cn("w-10 h-10 text-brand-gold relative z-10", isWeaving && "animate-spin")} />
-                </motion.div>
-                <h3 className="text-2xl font-black text-white uppercase tracking-[0.4em] mb-4 italic">
-                  {isWeaving ? "당신의 대박 스토리가 생성되고 있습니다" : "The AI Loom"}
-                </h3>
-                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.5em] leading-[2.5] max-w-sm mx-auto">
-                  The character generator is ready<br />
-                  <span className="text-neutral-700">to generate multiple characters for your script</span><br />
-                  based on your narrative seed.
-                </p>
-                
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button 
-                    onClick={initiateWeaving}
-                    disabled={isWeaving}
-                    className="mt-12 bg-transparent border border-brand-gold/30 hover:border-brand-gold text-brand-gold text-[10px] font-black uppercase px-12 h-14 rounded-full tracking-[0.2em] transition-all relative overflow-hidden group/btn"
-                  >
-                    <div className="absolute inset-0 bg-brand-gold/5 translate-y-full group-hover/btn:translate-y-0 transition-transform" />
-                    <span className="relative">{isWeaving ? "당신의 대박 스토리가 생성되고 있습니다" : "이야기 생성하기"}</span>
-                  </Button>
-                </motion.div>
+          {/* Manual Character Cards */}
+          {formData.characters.map((char: any, idx: number) => (
+            <div key={char.id || idx} className={cn(
+              "transition-all duration-700",
+              charMode === "ai" ? "opacity-20 pointer-events-none scale-95 grayscale" : "opacity-100"
+            )}>
+              <CharacterCard 
+                character={char}
+                allCharacters={formData.characters}
+                onUpdate={(updates) => updateCharacter(idx, updates)}
+                onRemove={() => removeCharacter(idx)}
+              />
+            </div>
+          ))}
+
+          {/* Add New Soul Button */}
+          {formData.characters.length < 4 && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleAddCharacter}
+              className="h-[380px] rounded-[2.5rem] border-2 border-dashed border-white/5 hover:border-brand-gold/40 hover:bg-brand-gold/5 transition-all flex flex-col items-center justify-center space-y-4 group"
+            >
+              <div className="p-4 rounded-2xl bg-neutral-900 group-hover:bg-brand-gold group-hover:text-black transition-all">
+                  <Plus size={28} strokeWidth={2.5} />
               </div>
-            </motion.div>
+              <span className="text-[10px] font-black text-neutral-600 group-hover:text-brand-gold uppercase tracking-[0.4em]">Add New Soul</span>
+            </motion.button>
           )}
-        </AnimatePresence>
-        
-        {/* Cinematic Status Footer */}
-        <div className="flex justify-end pr-10">
-          <div className="text-[10px] text-neutral-700 font-black uppercase tracking-[0.4em] italic pointer-events-none">
-            Architecting Stage...
-          </div>
         </div>
+        
+        {/* Cinematic Status Footer - REMOVED AS REQUESTED */}
       </section>
     </div>
   );

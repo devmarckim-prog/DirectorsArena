@@ -3,6 +3,7 @@
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
+import { getResolvedModelId } from '@/lib/ai/models';
 import { createClient } from '@supabase/supabase-js';
 import { persistProjectGeneration } from '@/lib/repository/generation';
 import { ProjectGenerationSchema } from '@/lib/schemas/generation';
@@ -30,7 +31,7 @@ export async function POST(
       .single();
 
     // v6.3: VIBE Protocol Calibration - Multi-model Aware
-    const stableModelId = adminSettings?.model_id_primary || 'claude-3-5-sonnet-20241022';
+    const stableModelId = getResolvedModelId(adminSettings?.model_id_primary, 'claude-sonnet-4-20250514');
     console.log(`[OMA] Phase 1: Model Handshake with ${stableModelId}`);
     
     const { data: project, error: pErr } = await supabase
@@ -54,7 +55,8 @@ export async function POST(
     console.log("[OMA] Phase 2: Updating DB to 10% (IGNITION)");
     await supabase.from('projects_v2').update({ status: 'BAKING', progress: 10 }).eq('id', projectId);
 
-    const systemPrompt = `
+    // v7.0: Admin 프롬프트 동적 주입 - DB에 prompt_scenario_init가 있으면 완전 대체
+    const HARDCODED_DEFAULT_PROMPT = `
 당신은 영화/드라마 시나리오 전문가입니다.
 대본이나 시나리오 설명을 입력받아, 등장인물을 JSON 배열로 추출하고 전체 프로젝트를 구성합니다.
 
@@ -69,7 +71,7 @@ export async function POST(
 {
   "name": "캐릭터 이름",
   "gender": "MALE|FEMALE|OTHER",
-  "ageGroup": "TEEN|20S|30S|40S|50S_PLUS",
+  "age": 1~100 사이 숫자,
   "role": "역할",
   "job": "직업",
   "desire": "욕구",
@@ -108,13 +110,106 @@ export async function POST(
 
 JSON keys: koreanTitle, englishTitle, logline, synopsis, characters, structure, episodes.
 Only include scriptContent for Episode 1.
-${adminSettings?.prompt_scenario_init || ''}`;
+
+# 씬(structure) 생성 규칙 [CRITICAL]
+- structure 배열의 각 beat는 반드시 **script_content** 필드를 포함해야 합니다
+- 각 beat의 script_content는 해당 씬의 실제 대본 (최소 100자 이상)
+- 씬 헤딩 형식: INT./EXT. 장소 - 시간대
+- 에피소드당 최소 5개 이상의 beat 생성
+- timestamp_label은 "00:01:00" 형식`;
+
+    // Admin DB 프롬프트가 충분히 길면 (50자 이상) 완전 대체
+    const adminPrompt = adminSettings?.prompt_scenario_init || '';
+    let systemPrompt = adminPrompt.length > 50 
+      ? adminPrompt 
+      : HARDCODED_DEFAULT_PROMPT;
+
+    // --- Inject Universe Settings (Custom Persona & Glossary) ---
+    try {
+      const generatedContent = typeof project.generated_content === 'string' 
+        ? JSON.parse(project.generated_content) 
+        : (project.generated_content || {});
+      const universeSettings = generatedContent.universe_settings;
+      
+      if (universeSettings) {
+        if (universeSettings.persona) {
+          systemPrompt = `[DIRECTOR'S PERSONA - CRITICAL INSTRUCTION]\n${universeSettings.persona}\n\n` + systemPrompt;
+        }
+        
+        if (universeSettings.glossary && Array.isArray(universeSettings.glossary) && universeSettings.glossary.length > 0) {
+          const glossaryStr = universeSettings.glossary.map((g: any) => `- ${g.term}: ${g.definition}`).join('\n');
+          systemPrompt += `\n\n[PROJECT GLOSSARY - MANDATORY VOCABULARY]\n${glossaryStr}\n(You MUST use these exact terms when referring to the concepts above.)`;
+        }
+      }
+    } catch (e) {
+      console.error("[OMA] Failed to parse universe settings:", e);
+    }
+
+    console.log(`[OMA] System Prompt Source: ${adminPrompt.length > 50 ? 'ADMIN_DB' : 'HARDCODED_DEFAULT'} (with UNIVERSE injection)`);
+
+    // v7.1: 어드민 schema_fields를 읽어 활성화된 필드만 userPrompt에 주입
+    const { data: adminSchemaRow } = await supabase
+      .from('admin_settings')
+      .select('schema_fields')
+      .limit(1)
+      .single();
+
+    const schemaFields: Record<string, any> = adminSchemaRow?.schema_fields || {};
+
+    // project 레코드 + synopsis.formData에서 값 추출
+    let formDataSeed: Record<string, any> = {};
+    try {
+      const synObj = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
+      formDataSeed = synObj?.formData || {};
+    } catch {}
+
+    // characters_v2에서 주인공(첫 번째) 데이터 추출 (캐릭터 필드 소스)
+    const { data: chars } = await supabase
+      .from('characters_v2')
+      .select('name, age, gender, job, desire, traits, relationship_to_protagonist')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true })
+      .limit(10);
+
+    const protagonist = chars?.[0];
+    const antagonist = chars?.[1];
+    const charSeed: Record<string, any> = {
+      protagonist_name:   protagonist?.name || '',
+      protagonist_age:    protagonist?.age || '',
+      protagonist_gender: protagonist?.gender || '',
+      protagonist_job:    protagonist?.job || '',
+      protagonist_desire: protagonist?.desire || '',
+      protagonist_trait:  Array.isArray(protagonist?.traits) ? protagonist.traits.join(', ') : (protagonist?.traits || ''),
+      antagonist_name:    antagonist?.name || '',
+      antagonist_job:     antagonist?.job || '',
+      key_relationship:   chars?.slice(0, 3).map((c: any) => `${c.name}(${c.relationship_to_protagonist || '주요인물'})`).join(', ') || '',
+      love_interest_name: chars?.find((c: any) => c.relationship_to_protagonist?.includes('romantic') || c.relationship_to_protagonist?.includes('연인'))?.name || '',
+    };
+
+    // 활성화된 필드만 골라 "- 레이블: 값" 형태로 구성
+    const injectedLines: string[] = [];
+    for (const [key, field] of Object.entries(schemaFields)) {
+      if (!field.enabled) continue;
+      const val =
+        charSeed[key] ??                    // 0순위: characters_v2 (캐릭터 카테고리)
+        project[field.sourceKey] ??         // 1순위: project 직접 컬럼
+        formDataSeed[field.sourceKey] ??    // 2순위: synopsis.formData
+        formDataSeed[key] ??                // 3순위: formData에 key 직접
+        '';
+      if (val !== '' && val !== null && val !== undefined) {
+        injectedLines.push(`- ${field.promptKey}: ${val}`);
+      }
+    }
+
+    const structuredContext = injectedLines.length > 0
+      ? `\n\n[프로젝트 구조화 정보]\n${injectedLines.join('\n')}`
+      : '';
 
     const steerPrompt = project.steer_prompt || "";
-    const userPrompt = steerPrompt 
-      ? `다음 지시사항을 반영하여 프로젝트를 재생성하십시오: "${steerPrompt}"\n\n기존 로그라인: "${project.logline || ''}"`
-      : `로그라인: "${project.logline || ''}" 기반으로 프로젝트를 시네마틱하게 생성하십시오.`;
-
+    const userPrompt = steerPrompt
+      ? `다음 지시사항을 반영하여 프로젝트를 재생성하십시오: "${steerPrompt}"${structuredContext}`
+      : `아래 정보를 바탕으로 시네마틱한 드라마/영화 프로젝트를 생성하십시오.${structuredContext}`;
+    
     console.log("[OMA] Phase 3: Sending Fetch to Anthropic (Raw VIBE)...");
     const response = await fetch(API_URL, {
       method: "POST",

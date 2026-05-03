@@ -7,9 +7,10 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProjectCard, Project } from "@/components/project-list/project-card";
+import { fetchSimilarWorksPageAction } from "@/app/actions";
 
 interface Comp {
-  id: number;
+  id: number | string;
   title: string;
   release_date: string;
   genres: string[];
@@ -20,137 +21,152 @@ interface Comp {
   tmdb_id?: string | number;
 }
 
-// v6.12 High-Fidelity Mock Data for UI Verification
-const MOCK_COMPS: Comp[] = [
-  {
-    id: 121,
-    title: "The Lord of the Rings: The Two Towers",
-    release_date: "2002-12-18",
-    genres: ["Adventure", "Fantasy", "Action"],
-    vote_average: 8.4,
-    poster_path: "https://image.tmdb.org/t/p/w780/56v2KjI5h9n9QCvAl6ybv3Yv7wk.jpg",
-    similarity_reason: "High-fantasy world-building and epic scale narrative with multiple character arcs crossing paths.",
-    media_type: "movie"
-  },
-  {
-    id: 27205,
-    title: "Inception",
-    release_date: "2010-07-15",
-    genres: ["Action", "Sci-Fi", "Adventure"],
-    vote_average: 8.4,
-    poster_path: "https://image.tmdb.org/t/p/w780/edv5CZvRjS99vS6Y6I6HjC1RSmY.jpg",
-    similarity_reason: "Complex psychological layers and non-linear storytelling structures that challenge perceived reality.",
-    media_type: "movie"
-  },
-  {
-    id: 157336,
-    title: "Interstellar",
-    release_date: "2014-11-05",
-    genres: ["Adventure", "Drama", "Sci-Fi"],
-    vote_average: 8.4,
-    poster_path: "https://image.tmdb.org/t/p/w780/gEU2QniE6E77NI6lCU6MxlSabaC.jpg",
-    similarity_reason: "Themes of cosmic solitude, familial bonds, and scientifically-grounded speculative fiction.",
-    media_type: "movie"
-  },
-  {
-    id: 155,
-    title: "The Dark Knight",
-    release_date: "2008-07-16",
-    genres: ["Drama", "Action", "Crime"],
-    vote_average: 8.5,
-    poster_path: "https://image.tmdb.org/t/p/w780/qJ2tW6WMUDp92SKyYw9Status.jpg",
-    similarity_reason: "Masterful exploration of morality and chaos within an urban noir setting with iconic antagonists.",
-    media_type: "movie"
-  }
-];
-
 interface CompsTabProps {
   projectId: string;
   hasSynopsis: boolean;
-  metadata?: any;
-  storedComps?: Comp[];
-  onGenerated?: (newComps: Comp[]) => void;
 }
 
-export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGenerated }: CompsTabProps) {
-  const [data, setData] = useState<Comp[] | null>(storedComps || null);
+export function CompsTab({ projectId, hasSynopsis }: CompsTabProps) {
+  const [data, setData] = useState<Comp[]>([]);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(4);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  const fetchPage = async (offset: number, append: boolean = true) => {
+    try {
+      const result = await fetchSimilarWorksPageAction(projectId, offset);
+      if (append) {
+        setData(prev => [...prev, ...result.data]);
+      } else {
+        setData(result.data);
+      }
+      setTotal(result.total);
+      setHasMore(result.hasMore);
+    } catch (e) {
+      console.error("[CompsTab] Fetch error:", e);
+    }
+  };
 
   useEffect(() => {
-    // Reset state when project changes
-    setData(storedComps || (metadata?.similarWorks) || null);
-    setVisibleCount(4);
-  }, [projectId, storedComps, metadata?.similarWorks]);
+    const init = async () => {
+      setIsInitialLoading(true);
+      // Ensure offset 0 and no append for initial load
+      await fetchPage(0, false);
+      setIsInitialLoading(false);
+    };
+    if (projectId) {
+      init();
+    }
+  }, [projectId]);
 
   const handleGenerate = async () => {
     if (!hasSynopsis) return;
     setIsLoading(true);
     try {
+      // Step 1: Trigger Server-side Generation & DB Persistence
       const res = await fetch('/api/scenario/comps', {
         method: 'POST',
         body: JSON.stringify({ projectId }),
         headers: { 'Content-Type': 'application/json' }
       });
       const json = await res.json();
-      if (json.success && json.data && json.data.length > 0) {
-        setData(json.data);
-        onGenerated?.(json.data);
+      
+      if (json.success) {
+        // Step 2: Fetch the first page from DB after generation
+        await fetchPage(0, false);
       } else {
-        console.error("[CompsTab] API returned no data or failed:", json.error);
-        setData([]); // Clear data to show empty state if analysis failed
+        console.error("[CompsTab] Generation failed:", json.error);
       }
     } catch (e) { 
-      console.error("[CompsTab] Critical fetch error:", e);
-      setData([]);
+      console.error("[CompsTab] Critical generate error:", e);
     }
     setIsLoading(false);
   };
 
-  const mapCompToProject = (comp: Comp): Project => {
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    await fetchPage(data.length, true);
+    setIsLoadingMore(false);
+  };
+
+  const mapCompToProject = (comp: any): Project => {
+    // v12.1: Extract packed metadata from viewer_stats if present
+    let extras: any = {};
+    if (typeof comp.viewer_stats === 'string') {
+      try {
+        extras = JSON.parse(comp.viewer_stats);
+      } catch (e) {
+        console.warn("[CompsTab] Failed to parse viewer_stats:", e);
+      }
+    } else if (comp.viewer_stats && typeof comp.viewer_stats === 'object') {
+      extras = comp.viewer_stats;
+    }
+
+    const poster = extras.poster_path || comp.poster_path || `https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=780`;
+    const genres = extras.genres || comp.genres || [];
+    const mediaType = extras.media_type || comp.media_type || 'movie';
+
     return {
       id: comp.id,
       title: comp.title,
-      platform: comp.media_type === 'movie' ? 'MOVIE' : 'SERIES',
-      genre: comp.genres?.join(' / ') || '장르 미지정',
+      platform: mediaType === 'movie' ? 'MOVIE' : 'SERIES',
+      genre: Array.isArray(genres) ? genres.join(' / ') : '장르 미지정',
       logline: comp.similarity_reason,
       status: 'COMPLETED',
       progress: 100,
-      image: comp.poster_path,
+      image: poster,
       is_sample: false
     };
   };
 
-  const currentList = data || metadata?.similarWorks || [];
-  const displayedList = (currentList || []).slice(0, visibleCount);
-  const hasMore = currentList && currentList.length > visibleCount;
+  if (isInitialLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-[325px] rounded-[20px] bg-white/[0.02] border border-white/5 overflow-hidden relative">
+            <div className="absolute inset-0 cinematic-shimmer" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 px-4">
-      {/* Header with Regenerate Trigger */}
-      {currentList && currentList.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-8"
-        >
-          <div>
-            <h3 className="text-[10px] font-black text-brand-gold uppercase tracking-[0.4em] mb-1">Cinematic Benchmark Output</h3>
-            <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest opacity-60">Targeting market parity and narrative synergy</p>
-          </div>
+      {/* Header */}
+      <motion.div 
+        className="flex items-center justify-between mb-8 relative z-20"
+      >
+        <div>
+          <h3 className="text-[10px] font-black text-brand-gold uppercase tracking-[0.4em] mb-1">Cinematic Benchmark Output</h3>
+          <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest opacity-60">
+            Targeting market parity and narrative synergy {total > 0 ? `(${total} Works)` : ''}
+          </p>
+        </div>
+        {(data.length > 0 || !isInitialLoading) && (
           <button 
             onClick={handleGenerate}
             disabled={isLoading}
-            className="group flex items-center space-x-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-brand-gold hover:text-black transition-all duration-500"
+            className={cn(
+              "group flex items-center space-x-2 px-6 py-3 rounded-full transition-all duration-500 border shadow-lg",
+              isLoading 
+                ? "bg-white/5 border-white/10 opacity-50 cursor-not-allowed" 
+                : "bg-brand-gold text-black border-brand-gold hover:scale-105 active:scale-95"
+            )}
           >
-            {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} className="group-hover:animate-pulse" />}
-            <span className="text-[9px] font-black uppercase tracking-widest">Regenerate Analysis</span>
+            {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            <span className="text-[9px] font-black uppercase tracking-widest">
+              {isLoading ? "Synthesizing..." : "Regenerate Analysis"}
+            </span>
           </button>
-        </motion.div>
-      )}
+        )}
+      </motion.div>
 
       <AnimatePresence mode="wait">
-        {isLoading ? (
+        {isLoading && data.length === 0 ? (
           <motion.div 
             key="loading"
             initial={{ opacity: 0 }}
@@ -164,18 +180,41 @@ export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGene
               </div>
             ))}
           </motion.div>
-        ) : currentList && currentList.length > 0 ? (
-          <div className="space-y-8">
+        ) : data.length > 0 ? (
+          <div className="space-y-8 relative">
+            {/* Loading Overlay for Regeneration */}
+            {isLoading && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-30 bg-black/40 backdrop-blur-[2px] flex items-center justify-center rounded-[30px]"
+              >
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="relative">
+                    <Loader2 size={40} className="text-brand-gold animate-spin" />
+                    <Sparkles size={16} className="absolute -top-1 -right-1 text-brand-gold animate-pulse" />
+                  </div>
+                  <p className="text-[10px] font-black text-white uppercase tracking-[0.4em] animate-pulse">
+                    Synthesizing New Dataset...
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
             <motion.div 
               key="list"
-              className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6"
+              className={cn(
+                "grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 transition-all duration-700",
+                isLoading && "opacity-30 blur-[2px] scale-[0.98]"
+              )}
             >
-              {displayedList.map((item: Comp, idx: number) => (
+              {data.map((item: Comp, idx: number) => (
                 <motion.div 
-                  key={idx}
+                  key={item.id || idx}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05, duration: 0.6 }}
+                  transition={{ delay: (idx % 4) * 0.05, duration: 0.6 }}
                 >
                   <ProjectCard 
                     project={mapCompToProject(item)} 
@@ -183,14 +222,23 @@ export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGene
                 </motion.div>
               ))}
             </motion.div>
+
             {hasMore && (
-              <div className="flex justify-center pb-12">
+              <div className="flex justify-center pt-4 pb-20">
                 <button 
-                  onClick={() => setVisibleCount(prev => prev + 4)}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[10px] font-bold uppercase tracking-widest text-neutral-400"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="group relative flex items-center space-x-3 px-12 py-4 rounded-full bg-white/[0.03] border border-white/10 hover:bg-brand-gold hover:text-black transition-all duration-700 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  <span>Load More</span>
-                  <ChevronDown size={14} />
+                  <div className="absolute inset-0 bg-brand-gold opacity-0 group-hover:opacity-10 transition-opacity rounded-full" />
+                  {isLoadingMore ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <>
+                      <span className="text-[11px] font-black uppercase tracking-[0.3em]">Load More Works</span>
+                      <ChevronDown size={16} className="group-hover:translate-y-1 transition-transform duration-500" />
+                    </>
+                  )}
                 </button>
               </div>
             )}
@@ -237,3 +285,4 @@ export function CompsTab({ projectId, hasSynopsis, metadata, storedComps, onGene
     </div>
   );
 }
+

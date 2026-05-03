@@ -12,6 +12,8 @@ import {
 import { HISTORICAL_DATA, getEventsForYear, getNearbyEvents, HistoricalEvent } from "@/lib/constants/history";
 
 interface HistoryTimelineProps {
+  initialYear?: number;
+  initialRegion?: 'KR' | 'GLOBAL';
   onYearChange: (year: number) => void;
   onRegionChange: (region: 'KR' | 'GLOBAL') => void;
 }
@@ -29,9 +31,9 @@ const CATEGORY_ICONS: Record<string, any> = {
   DISEASE: Flame // Fallback for disease
 };
 
-export function HistoryTimeline({ onYearChange, onRegionChange }: HistoryTimelineProps) {
-  const [year, setYear] = useState(2026);
-  const [region, setRegion] = useState<'KR' | 'GLOBAL'>('KR');
+export function HistoryTimeline({ initialYear = 2026, initialRegion = 'KR', onYearChange, onRegionChange }: HistoryTimelineProps) {
+  const [year, setYear] = useState(initialYear);
+  const [region, setRegion] = useState<'KR' | 'GLOBAL'>(initialRegion);
   const [isEditingYear, setIsEditingYear] = useState(false);
   const [events, setEvents] = useState<HistoricalEvent[]>([]);
   const [nearbyEvents, setNearbyEvents] = useState<HistoricalEvent[]>([]);

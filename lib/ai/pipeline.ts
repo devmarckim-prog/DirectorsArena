@@ -1,15 +1,18 @@
 import { anthropic } from '@ai-sdk/anthropic';
 import { generateObject, streamObject } from 'ai';
 import { SceneSchema, BlockSchema } from '../schemas/project';
+import { getResolvedModelId } from './models';
+import { getAdminSettingsAction } from '../actions/admin';
 
 /**
  * Stage 1: Writing (Draft Generation)
  */
 export async function generateDraft(sceneInfo: any) {
-  // Logic for initial writing
-  // This will use streamObject for progressive UI updates
+  const adminSettings = await getAdminSettingsAction();
+  const modelId = getResolvedModelId(adminSettings.model_id_primary, 'claude-3-haiku-20240307');
+
   return streamObject({
-    model: anthropic('claude-3-5-sonnet-20241022'),
+    model: anthropic(modelId),
     schema: SceneSchema,
     prompt: `Write a scene based on: ${JSON.stringify(sceneInfo)}`,
   });
@@ -20,9 +23,11 @@ export async function generateDraft(sceneInfo: any) {
  * This runs automatically after Stage 1
  */
 export async function auditScene(sceneData: any) {
-  // Logic for automated background QC
+  const adminSettings = await getAdminSettingsAction();
+  const modelId = getResolvedModelId(adminSettings.model_id_fast, 'claude-3-haiku-20240307');
+
   const auditResult = await generateObject({
-    model: anthropic('claude-3-5-haiku-20241022'),
+    model: anthropic(modelId),
     schema: SceneSchema.pick({ qc_report: true, status: true }),
     prompt: `Audit this scene for consistency and quality: ${JSON.stringify(sceneData)}`,
   });

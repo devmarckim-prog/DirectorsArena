@@ -1,28 +1,78 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Shield, Check, X, Edit3 } from "lucide-react";
+import { 
+  Shield, Check, X, Edit3, Upload, Loader2, Image as ImageIcon,
+  Rocket, Droplet, Heart, Activity
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { CharacterEditForm } from "./character-edit-form";
+import { CharacterAvatar } from "./character-avatar";
 
 interface Props {
   character: any;
+  allCharacters: any[];
   isActive: boolean;
+  isEditing?: boolean;
   onUpdate: (updates: any) => Promise<any>;
   onEditFullMode: () => void;
   onSelect: () => void;
+  onCloseEdit?: () => void;
 }
 
-export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFullMode, onSelect }: Props) {
+export function CharacterNarrativeCard({ 
+  character, 
+  allCharacters,
+  isActive, 
+  isEditing,
+  onUpdate, 
+  onEditFullMode, 
+  onSelect,
+  onCloseEdit
+}: Props) {
   // ── Optimistic local state ──
   const [local, setLocal] = useState<any>(character);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState<any>("");
 
-  // Sync when a different character is passed (e.g., navigating carousel)
+  // Sync when a different character is passed
   useEffect(() => {
     setLocal(character);
     setEditingField(null);
-  }, [character?.id]);
+  }, [character?.id, character]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'characters');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        const updated = { ...local, avatar_url: data.url };
+        setLocal(updated);
+        await onUpdate(updated);
+      } else {
+        alert("Upload failed: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const startEdit = (e: React.MouseEvent, field: string, value: any) => {
     e.stopPropagation();
@@ -41,15 +91,12 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
     e?.stopPropagation();
     if (!editingField) return;
     const updated = { ...local, [editingField]: tempValue };
-    // 1. Optimistic UI update
     setLocal(updated);
     setEditingField(null);
     setTempValue("");
-    // 2. Async persist
     await onUpdate(updated);
   };
 
-  // ── Tiny save/cancel buttons ──
   const SaveCancel = () => (
     <div className="flex gap-1.5 mt-1.5" onClick={(e) => e.stopPropagation()}>
       <button onClick={cancel} className="p-0.5 rounded-full bg-neutral-800 text-neutral-500 hover:text-red-400 transition-colors">
@@ -63,159 +110,176 @@ export function CharacterNarrativeCard({ character, isActive, onUpdate, onEditFu
 
   const displayDesc = local.trait || local.description || local.look;
   const displayDesire = local.desire || local.void;
+  
+  const getDisplayAge = () => {
+    // 1. Prioritize exact numerical age
+    const exactAge = typeof local.age === 'number' ? local.age : parseInt(local.age);
+    if (!isNaN(exactAge) && exactAge > 0) return `${exactAge}세`;
+    
+    // 2. Fallback to categorical age groups
+    const group = local.ageGroup || local.age_group;
+    if (group && group !== "null" && group !== "undefined") {
+      const match = group.match(/\d+/);
+      return match ? `${match[0]}대` : group;
+    }
+    return "나이 미상";
+  };
 
   return (
-    <div
+    <motion.div
+      layout
       id={`char-card-${character.id}`}
       data-character-card
       onClick={() => { if (!isActive) onSelect(); }}
       className={cn(
-        "group relative w-[85vw] md:min-w-[420px] snap-center bg-[#09090B] border rounded-[28px] p-6 transition-all duration-700 cursor-pointer overflow-hidden",
+        "group relative w-[85vw] md:min-w-[420px] snap-center bg-[#09090B] border rounded-[28px] p-6 transition-all duration-700 cursor-pointer",
+        isEditing ? "min-h-[850px] z-[100] border-brand-gold ring-2 ring-brand-gold/20 shadow-[0_0_100px_rgba(197,160,89,0.3)]" : 
         isActive
           ? "border-brand-gold/60 bg-white/[0.04] scale-[1.02] ring-1 ring-brand-gold/20 shadow-[0_0_40px_rgba(197,160,89,0.05)]"
           : "border-white/5 opacity-40 hover:opacity-100"
       )}
     >
-      <div className="relative z-10 space-y-4">
-
-        {/* ── ROW 1: Name + Age + Shield ── */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            {/* Name */}
-            {editingField === "name" ? (
-              <div onClick={(e) => e.stopPropagation()}>
-                <input
-                  autoFocus
-                  value={tempValue}
-                  onChange={(e) => setTempValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-                  className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-0.5 text-brand-gold font-bold text-xl uppercase tracking-tighter outline-none focus:border-brand-gold font-sans"
-                />
-                <SaveCancel />
-              </div>
-            ) : (
-              <div className="flex items-baseline gap-2 flex-wrap mb-1">
-                <h4
-                  onClick={(e) => startEdit(e, "name", local.name)}
-                  className={cn(
-                    "text-[23px] font-bold uppercase tracking-tight leading-none transition-colors font-sans",
-                    isActive ? "text-brand-gold cursor-pointer hover:opacity-80" : "text-text-primary"
-                  )}
-                >
-                  {local.name}
-                </h4>
-
-                {/* Age — inline slider when editing */}
-                {editingField === "age" ? (
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="range" min="0" max="100"
-                      value={tempValue}
-                      onChange={(e) => setTempValue(parseInt(e.target.value))}
-                      className="w-20 h-1 accent-brand-gold cursor-pointer"
-                    />
-                    <span className="text-brand-gold text-xs font-bold w-8">{tempValue}세</span>
-                    <button onClick={cancel} className="p-0.5 rounded-full bg-neutral-800 text-neutral-500 hover:text-red-400"><X size={9} /></button>
-                    <button onClick={save} className="p-0.5 rounded-full bg-brand-gold text-black"><Check size={9} strokeWidth={3} /></button>
-                  </div>
-                ) : (
-                  <span
-                    onClick={(e) => startEdit(e, "age", local.age ?? 0)}
-                    className={cn("text-[13px] font-medium text-text-tertiary leading-none transition-colors font-mono", isActive && "cursor-pointer hover:text-brand-gold")}
-                  >
-                    {local.age > 0 ? `${local.age}세` : "나이 미상"}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Job */}
-            {editingField === "job" ? (
-              <div onClick={(e) => e.stopPropagation()}>
-                <input
-                  autoFocus
-                  value={tempValue}
-                  onChange={(e) => setTempValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-                  className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[12px] font-medium uppercase tracking-widest outline-none focus:border-brand-gold font-mono"
-                />
-                <SaveCancel />
-              </div>
-            ) : (
-              <span
-                onClick={(e) => startEdit(e, "job", local.job || local.role)}
-                className={cn("text-[13px] font-medium text-text-tertiary uppercase tracking-[0.1em] block transition-colors font-mono", isActive && "cursor-pointer hover:text-text-secondary")}
-              >
-                {local.job || local.role || "역할 미정"}
-              </span>
-            )}
+      <div className="relative z-10 flex flex-col h-full">
+        {/* ── ROW 1: ALWAYS VISIBLE Top Section ── */}
+        <div className="flex items-start justify-between gap-3 mb-6">
+          <div 
+            className="shrink-0 overflow-hidden relative group cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+          >
+            <CharacterAvatar 
+              name={local.name} 
+              age={local.age} 
+              gender={local.gender} 
+              avatar_url={local.avatar_url}
+              size={64}
+            />
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+              {isUploading ? <Loader2 className="animate-spin text-brand-gold" size={16} /> : <Upload className="text-white" size={16} />}
+            </div>
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
           </div>
 
-          {/* Shield + edit button */}
+          <div className="flex-1 min-w-0 pt-1">
+            <div className="flex items-baseline gap-2 flex-wrap mb-1">
+              <h4 className="text-[23px] font-bold uppercase tracking-tight leading-none text-brand-gold font-sans">
+                {local.name}
+              </h4>
+              <span className="text-[13px] font-medium text-text-tertiary font-mono">
+                {getDisplayAge()}
+              </span>
+            </div>
+            <span className="text-[13px] font-medium text-text-tertiary uppercase tracking-[0.1em] block font-mono">
+              {local.job || local.role || "역할 미정"}
+            </span>
+          </div>
+
           <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <Shield size={20} className={isActive ? "text-brand-gold" : "text-white/10"} />
-            {isActive && (
-              <button onClick={(e) => { e.stopPropagation(); onEditFullMode(); }} className="p-1.5 bg-brand-gold/10 hover:bg-brand-gold/20 rounded-full transition-colors">
-                <Edit3 size={13} className="text-brand-gold" />
+            <Shield 
+              size={20} 
+              className={isActive ? "text-brand-gold drop-shadow-[0_0_8px_rgba(197,160,89,0.5)]" : "text-white/10"} 
+            />
+            {!isEditing && (
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onEditFullMode(); 
+                }} 
+                className={cn(
+                  "p-2 rounded-full transition-all duration-300",
+                  isActive ? "bg-brand-gold text-black shadow-lg shadow-brand-gold/20 scale-110" : "bg-white/5 text-white/20 hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Edit3 size={14} />
+              </button>
+            )}
+            {isEditing && (
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onCloseEdit?.(); 
+                }} 
+                className="p-2 rounded-full bg-white/10 text-white/40 hover:text-white hover:bg-white/20 transition-all"
+              >
+                <X size={14} />
               </button>
             )}
           </div>
         </div>
 
-        {/* ── ROW 2: Description ── */}
-        <div className="pl-5 border-l-2 border-brand-gold/20">
-          {editingField === "trait" ? (
-            <div onClick={(e) => e.stopPropagation()}>
-              <textarea
-                autoFocus
-                value={tempValue}
-                onChange={(e) => setTempValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
-                rows={2}
-                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[13px] italic outline-none focus:border-brand-gold resize-none"
-              />
-              <SaveCancel />
-            </div>
-          ) : (
-            <p
-              onClick={(e) => startEdit(e, "trait", displayDesc)}
-              className={cn("text-[15px] leading-[1.75] italic transition-colors duration-300 font-sans", isActive ? "text-text-primary cursor-pointer hover:text-brand-gold" : "text-text-tertiary")}
+        {/* ── EXPANDABLE CONTENT AREA ── */}
+        <AnimatePresence mode="wait">
+          {isEditing ? (
+            <motion.div 
+              key="edit-form-area"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
             >
-              {displayDesc
-                ? `"${displayDesc}"`
-                : <span className="text-white/20 not-italic">{isActive ? "외모/특성 클릭하여 입력" : "—"}</span>}
-            </p>
-          )}
-        </div>
+              <div className="pt-4 border-t border-white/10">
+                <CharacterEditForm 
+                  character={local}
+                  allCharacters={allCharacters}
+                  onClose={onCloseEdit || (() => {})}
+                  onSave={onUpdate}
+                  hideHeader={true}
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="summary-area"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
+              {/* Trait (Narrative DNA) */}
+              <div className="pl-5 border-l-2 border-brand-gold/20">
+                <p className="text-[15px] leading-[1.75] italic text-text-primary font-sans">
+                  {displayDesc ? `"${displayDesc}"` : "인물 설정이 집필되지 않았습니다."}
+                </p>
+              </div>
 
-        {/* ── ROW 3: Desire ── */}
-        <div className="flex items-start gap-3">
-          <span className="text-[8px] font-black text-brand-gold/40 uppercase tracking-[0.3em] mt-1 shrink-0">욕구</span>
-          {editingField === "desire" ? (
-            <div className="flex-1" onClick={(e) => e.stopPropagation()}>
-              <input
-                autoFocus
-                value={tempValue}
-                onChange={(e) => setTempValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-                className="w-full bg-white/5 border border-brand-gold/40 rounded-lg px-2 py-1 text-white text-[12px] outline-none focus:border-brand-gold"
-              />
-              <SaveCancel />
-            </div>
-          ) : (
-            <p
-              onClick={(e) => startEdit(e, "desire", displayDesire)}
-              className={cn("text-[12px] font-medium flex-1 transition-colors", isActive ? "text-white/70 cursor-pointer hover:text-brand-gold" : "text-white/25")}
-            >
-              {displayDesire || <span className="italic text-white/20">{isActive ? "욕구 클릭하여 입력" : "—"}</span>}
-            </p>
+              {/* Narrative Parameters */}
+              <div className="space-y-2 pt-2">
+                {local.desire && (
+                  <div className="flex items-center gap-3">
+                    <Rocket size={10} className="text-blue-400/50" />
+                    <span className="text-[11px] text-white/50 font-medium leading-none">{local.desire}</span>
+                  </div>
+                )}
+                {local.void && (
+                  <div className="flex items-center gap-3">
+                    <Droplet size={10} className="text-red-400/50" />
+                    <span className="text-[11px] text-white/50 font-medium leading-none italic">{local.void}</span>
+                  </div>
+                )}
+                {local.secret && (
+                  <div className="flex items-center gap-3">
+                    <Shield size={10} className="text-brand-gold/50" />
+                    <span className="text-[11px] text-brand-gold/60 font-black uppercase tracking-widest leading-none">Secret Archive Loaded</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Relationship */}
+              {local.relationship_type && (
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+                  <Heart size={10} className="text-pink-500/40" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/30">
+                    Relationship: <span className="text-white/60 ml-1">{local.relationship_type}</span>
+                  </p>
+                </div>
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
 
-      {isActive && (
+      {isActive && !isEditing && (
         <div className="absolute top-[-10%] right-[-10%] w-[180px] h-[180px] bg-brand-gold/[0.03] blur-[50px] rounded-full pointer-events-none" />
       )}
-    </div>
+    </motion.div>
   );
 }

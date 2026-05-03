@@ -34,9 +34,9 @@ export function repairJSON(jsonStr: string): string {
   if (!repaired) return "{}";
 
   // Count braces and brackets
-  let openBraces = (repaired.match(/\{/g) || []).length;
+  const openBraces = (repaired.match(/\{/g) || []).length;
   let closeBraces = (repaired.match(/\}/g) || []).length;
-  let openBrackets = (repaired.match(/\[/g) || []).length;
+  const openBrackets = (repaired.match(/\[/g) || []).length;
   let closeBrackets = (repaired.match(/\]/g) || []).length;
 
   // Append missing terminations in reverse order

@@ -46,8 +46,8 @@ export function StepOne({ formData, setFormData }: StepOneProps) {
   const selectionCount = formData.platform ? 1 : 0;
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col items-center">
-      <div className="w-full flex justify-between items-end mb-6 px-2">
+    <div className="w-full flex flex-col items-center">
+      <div className="w-full mb-6">
         <div className="text-left">
           <motion.h2 
             className="text-4xl sm:text-5xl font-black text-white mb-1 tracking-tighter"

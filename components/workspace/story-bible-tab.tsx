@@ -40,24 +40,51 @@ export function StoryBibleTab({
     
     const charMap = new Map();
     
-    // DB characters take precedence
+    // 1. First pass: Add DB characters (which should have UUIDs)
     dbChars.forEach(c => {
-      if (c && c.id) {
-        charMap.set(c.id, { ...c, aliases: new Set([c.name]) });
-      } else if (c && c.name) {
-        charMap.set(c.name, { ...c, aliases: new Set([c.name]) });
+      const charId = c.id || c.name;
+      if (charId) {
+        charMap.set(charId, { 
+          ...c, 
+          id: charId, // Ensure ID is present in the object
+          aliases: new Set([c.name]) 
+        });
       }
     });
     
-    // Merge meta characters (to preserve original names as aliases)
+    // 2. Second pass: Merge meta characters (to preserve original names as aliases and fill gaps)
     metaChars.forEach(c => {
-      if (c && c.id && charMap.has(c.id)) {
-        const existing = charMap.get(c.id);
-        if (c.name) existing.aliases.add(c.name);
-      } else if (c && c.name && charMap.has(c.name)) {
-        // Skip, already merged by name
+      const charId = c.id || c.name;
+      const match = Array.from(charMap.values()).find(existing => 
+        existing.id === charId || existing.name === c.name
+      );
+
+      if (match) {
+        // Merge attributes from meta if DB is missing them
+        if (!match.id && charId) match.id = charId;
+        if (c.name) match.aliases.add(c.name);
+        
+        // Fill missing narrative data from meta (as fallback)
+        if (!match.desire && c.desire) match.desire = c.desire;
+        if (!match.void && c.void) match.void = c.void;
+        
+        // Standardize: If exact age is present, kill categorical groups to avoid shadowing
+        if (match.age && match.age > 0) {
+          delete match.ageGroup;
+          delete match.age_group;
+        }
       } else if (c && c.name) {
-        charMap.set(c.id || c.name, { ...c, aliases: new Set([c.name]) });
+        const newChar = { 
+          ...c, 
+          id: charId,
+          aliases: new Set([c.name]) 
+        };
+        // Standardize here too
+        if (newChar.age && newChar.age > 0) {
+          delete newChar.ageGroup;
+          delete newChar.age_group;
+        }
+        charMap.set(charId, newChar);
       }
     });
     
@@ -78,6 +105,13 @@ export function StoryBibleTab({
         ...c, 
         matchAliases: Array.from(allAliases).sort((a, b) => b.length - a.length)
       };
+    }).map(c => {
+      // Final standardization pass: ensure age > 0 kills ageGroup
+      if (c.age && c.age > 0) {
+        delete c.ageGroup;
+        delete c.age_group;
+      }
+      return c;
     });
   }, [metadata?.characters, project.characters]);
 
@@ -232,11 +266,11 @@ export function StoryBibleTab({
                       <div className="w-[3px] h-auto bg-brand-gold shrink-0" />
                       <div className="flex flex-col">
                         {logline && (
-                          <p className="font-handwritten text-[32px] leading-snug tracking-tight mb-4 opacity-95 italic">
+                          <p className="font-serif font-black text-brand-gold/90 text-[20px] leading-snug tracking-tight mb-1.5 opacity-95 italic">
                             "{logline}"
                           </p>
                         )}
-                        <div className="text-[18px] text-text-secondary leading-[1.8] max-w-[65ch] whitespace-pre-wrap font-sans">
+                        <div className="text-[16px] text-text-secondary leading-[1.5] max-w-[65ch] whitespace-pre-wrap font-sans">
                           {parts.map((p, i) => (
                             p.type === 'character' ? (
                               <span 
@@ -318,10 +352,16 @@ export function StoryBibleTab({
                     <CharacterNarrativeCard 
                       key={char.id || idx} 
                       character={char} 
+                      allCharacters={characters}
                       isActive={activeIndex === idx} 
+                      isEditing={editingCharId === char.id}
                       onUpdate={(updates) => onUpdateCharacter(char.id, updates)} 
-                      onEditFullMode={() => setEditingCharId(char.id)} 
+                      onEditFullMode={() => {
+                        console.log("[Tab] Triggering Edit Mode for", char.id);
+                        setEditingCharId(char.id);
+                      }} 
                       onSelect={() => handleCardSelect(char.id || char.name, idx)} 
+                      onCloseEdit={() => setEditingCharId(null)}
                     />
                   )) : <div className="w-full py-10 text-center text-white/10 uppercase text-[10px] font-black border border-dashed border-white/5 rounded-3xl">등장인물 분석 중...</div>}
                 </div>
@@ -341,16 +381,6 @@ export function StoryBibleTab({
           </div>
         </div>
       </div>
-
-      <AnimatePresence>
-        {editingCharId && (
-          <CharacterEditForm 
-            character={characters.find(c => c.id === editingCharId)} 
-            onClose={() => setEditingCharId(null)} 
-            onSave={(updates) => onUpdateCharacter(editingCharId, updates)} 
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

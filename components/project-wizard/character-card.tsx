@@ -9,6 +9,8 @@ import {
   Briefcase, Calendar, Venus, Mars
 } from "lucide-react";
 
+import { CharacterAvatar } from "../workspace/character-avatar";
+
 interface CharacterCardProps {
   character: any;
   allCharacters: any[];
@@ -235,20 +237,31 @@ export function CharacterCard({ character, allCharacters, onUpdate, onRemove }: 
                       {character.age ? `${character.age}Y` : "Age?"}
                     </button>
                   </div>
-                  <button 
+                   <button 
                     onClick={(e) => { e.stopPropagation(); startEditing("name", character.name); }}
                     className="text-2xl font-black text-white uppercase tracking-tighter text-left hover:text-brand-gold transition-colors block leading-none"
                   >
                     {character.name || "Untitled Soul"}
                   </button>
                </div>
-               <div className="flex space-x-2">
-                  <button onClick={(e) => { e.stopPropagation(); setIsFlipped(true); }} className="p-2.5 rounded-xl bg-white/5 text-neutral-500 hover:text-brand-gold transition-all">
-                    <RotateCw size={14} />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="p-2.5 rounded-xl bg-white/5 text-neutral-500 hover:text-red-500 transition-all">
-                    <Trash2 size={14} />
-                  </button>
+               <div className="flex items-start space-x-3">
+                  <div className="relative group/avatar">
+                    <CharacterAvatar 
+                      name={character.name || "Untitled"} 
+                      age={character.age} 
+                      gender={character.gender} 
+                      size={60}
+                      className="border-2 border-brand-gold/10 group-hover/avatar:border-brand-gold/40 transition-all duration-500 shadow-2xl"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <button onClick={(e) => { e.stopPropagation(); setIsFlipped(true); }} className="p-2.5 rounded-xl bg-white/5 text-neutral-500 hover:text-brand-gold transition-all">
+                      <RotateCw size={14} />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="p-2.5 rounded-xl bg-white/5 text-neutral-500 hover:text-red-500 transition-all">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                </div>
             </div>
 
@@ -279,13 +292,7 @@ export function CharacterCard({ character, allCharacters, onUpdate, onRemove }: 
           </div>
 
           <div className="flex items-center justify-between border-t border-white/5 pt-4">
-             <div className="flex -space-x-2">
-                {[1, 2].map((i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-neutral-950 bg-neutral-900 flex items-center justify-center text-[10px] font-bold text-neutral-700">
-                    <User size={12} />
-                  </div>
-                ))}
-             </div>
+             <div />
              <button 
               onClick={(e) => { e.stopPropagation(); setIsFlipped(true); }}
               className="text-[9px] font-black text-brand-gold/80 uppercase tracking-[0.5em] hover:tracking-[0.6em] transition-all flex items-center"

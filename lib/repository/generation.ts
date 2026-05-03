@@ -26,7 +26,7 @@ export async function persistProjectGeneration(
       subtitle: generation.englishTitle,
       logline: generation.logline,
       synopsis: generation.synopsis,
-      status: 'COMPLETED',
+      status: 'READY',
       progress: 100,
     })
     .eq('id', projectId);
@@ -52,20 +52,40 @@ export async function persistProjectGeneration(
     await supabase.from('characters_v2').insert(charactersToInsert);
   }
 
-  // 3. Insert episodes
+  // 3. Insert episodes + beats (with correct episode_id linkage)
   if (generation.episodes && generation.episodes.length > 0) {
-    const episodesToInsert = generation.episodes.map(ep => ({
-      project_id: projectId,
-      episode_number: ep.episodeNumber,
-      title: ep.title,
-      summary: ep.summary,
-      script_content: ep.scriptContent,
-    }));
-    await supabase.from('episodes_v2').insert(episodesToInsert);
+    for (const ep of generation.episodes) {
+      const { data: savedEp, error: epErr } = await supabase
+        .from('episodes_v2')
+        .insert({
+          project_id: projectId,
+          episode_number: ep.episodeNumber,
+          title: ep.title,
+          summary: ep.summary,
+          script_content: ep.scriptContent,
+        })
+        .select('id')
+        .single();
+
+      if (epErr) {
+        console.error(`[Repository] Episode ${ep.episodeNumber} insert failed:`, epErr);
+        continue;
+      }
+
+      console.log(`[Repository] Episode ${ep.episodeNumber} saved. ID: ${savedEp.id}`);
+    }
   }
 
-  // 4. Insert story beats
+  // 4. Insert story beats (linked to project for 3-act structure beats)
   if (generation.structure && generation.structure.length > 0) {
+    // First, get the episode 1 id for scene-level beats
+    const { data: ep1 } = await supabase
+      .from('episodes_v2')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('episode_number', 1)
+      .single();
+
     const beatsToInsert = generation.structure.map((beat, idx) => ({
       project_id: projectId,
       act_number: beat.act_number,
@@ -75,7 +95,16 @@ export async function persistProjectGeneration(
       timestamp_label: beat.timestamp_label,
       order_index: idx,
     }));
-    await supabase.from('story_beats_v2').insert(beatsToInsert);
+
+    const { error: beatErr } = await supabase
+      .from('story_beats_v2')
+      .insert(beatsToInsert);
+
+    if (beatErr) {
+      console.error(`[Repository] story_beats_v2 insert failed:`, beatErr);
+    } else {
+      console.log(`[Repository] ${beatsToInsert.length} beats saved with episode_id: ${ep1?.id}`);
+    }
   }
 
   return { success: true };

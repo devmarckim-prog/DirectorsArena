@@ -7,12 +7,12 @@ import { ProjectGridSlot } from "@/components/project-list/project-grid-slot";
 import { ProjectCard, Project } from "@/components/project-list/project-card";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { Database, Sparkles } from "lucide-react";
-import { fetchProjectsAction, deleteProjectAction, insertSampleProjectsAction, fetchSystemAssetsAction, seedSystemAssetsAction } from "@/app/actions";
+import { fetchProjectsAction, deleteProjectAction, insertSampleProjectsAction, fetchGenreImagesAction } from "@/app/actions";
 
 export default function ProjectListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [systemImages, setSystemImages] = useState<any[]>([]);
+  const [genreImages, setGenreImages] = useState<Record<string, string[]>>({});
   const [credits, setCredits] = useState(1200);
 
   const handleDeleteProject = async (id: string | number) => {
@@ -53,12 +53,9 @@ export default function ProjectListPage() {
           setProjects(data as Project[]);
         }
 
-        let assets = await fetchSystemAssetsAction('dummy_image');
-        if (assets.length === 0) {
-          await seedSystemAssetsAction();
-          assets = await fetchSystemAssetsAction('dummy_image');
-        }
-        setSystemImages(assets);
+        // DB에서 장르별 이미지 맵 로드
+        const images = await fetchGenreImagesAction();
+        setGenreImages(images);
 
       } catch (error) {
         console.error("Failed to load dashboard data", error);
@@ -123,7 +120,7 @@ export default function ProjectListPage() {
                 >
                   <ProjectCard 
                     project={project} 
-                    systemImages={systemImages}
+                    genreImages={genreImages}
                     onDelete={handleDeleteProject} 
                   />
                 </motion.div>

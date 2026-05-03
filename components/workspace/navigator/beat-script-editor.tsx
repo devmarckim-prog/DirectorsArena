@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, X } from "lucide-react";
+import { Send, Sparkles, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { ScriptEditor } from "../script-editor";
 
 interface BeatScriptEditorProps {
@@ -17,6 +17,9 @@ interface BeatScriptEditorProps {
   onSubmitSteer: () => void;
   handleSteerBlock: (block: any) => void;
   bottomRef: React.RefObject<HTMLDivElement>;
+  // v11.31: Scene Navigation
+  sceneList?: any[];
+  onNavigateScene?: (beat: any) => void;
 }
 
 export function BeatScriptEditor({
@@ -30,36 +33,27 @@ export function BeatScriptEditor({
   setInstruction,
   onSubmitSteer,
   handleSteerBlock,
-  bottomRef
+  bottomRef,
+  sceneList = [],
+  onNavigateScene,
 }: BeatScriptEditorProps) {
-  // v11.0: Defensive check for selectedBeat
   if (!selectedBeat) return null;
 
-  const displayTitle = selectedBeat.title || `Scene ${selectedBeat.id || "Unknown"}`;
+  const currentIndex = sceneList.findIndex(
+    (s) => s.id === selectedBeat.id || s.title === selectedBeat.title
+  );
+  const prevScene = currentIndex > 0 ? sceneList[currentIndex - 1] : null;
+  const nextScene = currentIndex < sceneList.length - 1 ? sceneList[currentIndex + 1] : null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="pt-16 px-4 md:px-8 max-w-5xl mx-auto"
+      className="pt-8 px-4 md:px-8 max-w-5xl mx-auto"
       ref={bottomRef}
     >
-      <div className="flex items-center gap-4 mb-10 border-b border-brand-gold/20 pb-6">
-        <div className="h-8 w-1 bg-brand-gold rounded-full" />
-        <div>
-          <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">{displayTitle}</h2>
-          <span className="text-[10px] font-black text-brand-gold uppercase tracking-[0.3em]">
-            {selectedBeat.timestamp_label || "Scene Sequence"}
-          </span>
-        </div>
-      </div>
-
-      <div className="font-serif italic text-zinc-500 text-lg leading-relaxed mb-16 border-l-2 border-brand-gold/20 pl-6 opacity-80">
-        {selectedBeat.description}
-      </div>
-
-      <div className="relative min-h-[50vh] bg-black/40 border border-white/5 rounded-3xl p-8 md:p-16 shadow-2xl">
+      <div className="relative min-h-[50vh] bg-black/10 border-white/5 rounded-3xl p-4 md:p-8">
         {scriptElements.length > 0 ? (
           <ScriptEditor
             elements={scriptElements}
@@ -158,6 +152,56 @@ export function BeatScriptEditor({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* v11.31: Scene Navigation Bar */}
+      {sceneList.length > 1 && (
+        <div className="flex items-center justify-between mt-8 mb-16 px-2">
+          {/* 이전 씬 */}
+          <button
+            onClick={() => prevScene && onNavigateScene?.(prevScene)}
+            disabled={!prevScene}
+            className="group flex items-center gap-3 px-5 py-3 rounded-2xl border border-white/10 bg-white/5 hover:border-brand-gold/40 hover:bg-brand-gold/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={16} className="text-brand-gold group-hover:-translate-x-1 transition-transform" />
+            <div className="text-left">
+              <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mb-0.5">Previous</p>
+              <p className="text-[11px] text-white/80 font-medium line-clamp-1 max-w-[180px]">
+                {prevScene?.title || ""}
+              </p>
+            </div>
+          </button>
+
+          {/* 현재 씬 인디케이터 */}
+          <div className="flex items-center gap-1.5">
+            {sceneList.map((_, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                  idx === currentIndex
+                    ? "bg-brand-gold w-4"
+                    : "bg-white/20 hover:bg-white/40"
+                )}
+              />
+            ))}
+          </div>
+
+          {/* 다음 씬 */}
+          <button
+            onClick={() => nextScene && onNavigateScene?.(nextScene)}
+            disabled={!nextScene}
+            className="group flex items-center gap-3 px-5 py-3 rounded-2xl border border-white/10 bg-white/5 hover:border-brand-gold/40 hover:bg-brand-gold/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <div className="text-right">
+              <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mb-0.5">Next</p>
+              <p className="text-[11px] text-white/80 font-medium line-clamp-1 max-w-[180px]">
+                {nextScene?.title || ""}
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-brand-gold group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }

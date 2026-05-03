@@ -10,7 +10,8 @@ import {
   updateEpisodeScriptContentAction,
   updateCharacterAction,
   triggerRegenerateAction,
-  updateProjectAction
+  updateProjectAction,
+  ensureEpisodeExistsAction
 } from "@/app/actions";
 import { supabase } from "@/lib/supabase/client";
 import { EpisodeSceneDraft } from "@/lib/schemas/generation";
@@ -24,18 +25,22 @@ import { cn } from "@/lib/utils";
 import { 
   Loader2, Sparkles, LayoutDashboard, 
   DollarSign, Clapperboard, Map, Play,
-  Lock, MapPin, ChevronLeft
+  Lock, User, MapPin, ChevronLeft, X
 } from "lucide-react";
 import { HeroHeader } from "@/components/workspace/hero-header";
 import { SidebarRail } from "@/components/workspace/sidebar-rail";
 import { StoryBibleTab } from "@/components/workspace/story-bible-tab";
+import { UniverseTab } from "@/components/workspace/universe-tab";
 import { NavigatorTab } from "@/components/workspace/navigator-tab";
 import { CompsTab } from "@/components/workspace/comps-tab";
+import { RevisionModal } from "@/components/workspace/revision-modal";
 import { SceneCoWriter } from "@/components/workspace/scene-co-writer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { motion, AnimatePresence } from "framer-motion";
+import { Clock, HardDrive } from "lucide-react";
+import { useAutoSave } from "@/lib/hooks/use-autosave";
 
 // ============================================
 // Shell Components (Casting, Budget, etc.)
@@ -173,11 +178,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
 
-  const [showInsights, setShowInsights] = useState(false);
+  const [masterMode, setMasterMode] = useState<'SCENARIO' | 'PRODUCTION'>('SCENARIO');
   const [activeTab, setActiveTab] = useState('BIBLE'); // Used for legacy sub-tabs
-  const [scenarioTab, setScenarioTab] = useState<'BIBLE' | 'SIMILAR' | 'NAVIGATOR'>('BIBLE');
+  const [scenarioTab, setScenarioTab] = useState<'BIBLE' | 'UNIVERSE' | 'SIMILAR' | 'NAVIGATOR'>('BIBLE');
   const [productionTab, setProductionTab] = useState<'CASTING' | 'BUDGET' | 'BREAKDOWN' | 'PPL'>('CASTING');
   const [isCoWriterOpen, setIsCoWriterOpen] = useState(false);
+  const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+
+  // v12: Auto-save Hook for offline protection
+  const { status: autoSaveStatus } = useAutoSave(`project_v2_${id}`, project, undefined, 3000);
 
   const metadata = useMemo(() => {
     // streamedData에 서사가 있으면 우선 사용 (generated_content 로드 or 스트리밍 후)
@@ -396,18 +405,38 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const handleGenerateEpisodeScript = async (episode: Episode) => {
     if (!project) return;
+    
+    // v11.16: Support both ID and Number (Handle placeholder cases)
     setGeneratingEpisodeId(episode.id);
+    
     try {
-      const result = await generateEpisodeScriptAction(project.id, episode.id, episode.episode_number);
+      let targetEpisodeId = episode.id;
+      
+      // If it's a placeholder, ensure it exists in DB first
+      if (episode.id.startsWith('placeholder')) {
+        const ensureResult = await ensureEpisodeExistsAction(project.id, episode.episode_number, episode.title);
+        if (ensureResult.success && ensureResult.episodeId) {
+          targetEpisodeId = ensureResult.episodeId;
+        } else {
+          alert("Failed to initialize episode record: " + ensureResult.error);
+          return;
+        }
+      }
+
+      const result = await generateEpisodeScriptAction(project.id, targetEpisodeId, episode.episode_number);
       if (result.success) {
         const refreshed = await fetchProjectDetailsAction(project.id);
         if (refreshed) {
           setProject(refreshed);
-          const updated = refreshed.episodes?.find((e: Episode) => e.id === episode.id);
+          const updated = refreshed.episodes?.find((e: Episode) => e.id === targetEpisodeId || e.episode_number === episode.episode_number);
           if (updated) setSelectedEpisode(updated);
         }
       }
-    } catch (e) { } finally { setGeneratingEpisodeId(null); }
+    } catch (e) { 
+      console.error("[ScriptGen] Failure:", e);
+    } finally { 
+      setGeneratingEpisodeId(null); 
+    }
   };
 
   const handleSteerDraft = async (instruction: string) => {
@@ -422,9 +451,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     } catch (e) { } finally { setIsGenerating(false); }
   };
 
-  const handleAcceptDraft = async () => {
+  const handleAcceptDraft = async (filteredElements?: any[]) => {
     if (!project || !selectedEpisode || !pendingDraft) return;
-    const draftText = pendingDraft.sceneElements.map(el => {
+    const elementsToProcess = filteredElements || pendingDraft.sceneElements;
+    const draftText = elementsToProcess.map(el => {
       switch(el.type) {
         case 'HEADING': return `\n\n${el.content.toUpperCase()}\n`;
         case 'ACTION': return `\n${el.content}\n`;
@@ -451,10 +481,34 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const handleUpdateCharacter = async (charId: string, updates: any) => {
     setProject((prev: any) => {
       if (!prev) return prev;
-      return { ...prev, characters: prev.characters?.map((c: any) => c.id === charId ? { ...c, ...updates } : c) };
+      
+      // 1. Update normalized characters array
+      const updatedChars = prev.characters?.map((c: any) => c.id === charId ? { ...c, ...updates } : c);
+      
+      // 2. Update denormalized synopsis characters (v10.1)
+      let updatedSynopsis = prev.synopsis;
+      try {
+        const synObj = typeof prev.synopsis === 'string' ? JSON.parse(prev.synopsis) : prev.synopsis;
+        if (synObj && synObj.characters) {
+          synObj.characters = synObj.characters.map((c: any) => 
+            (c.id === charId || c.name === charId || c.name === (updates.name || '')) ? { ...c, ...updates } : c
+          );
+          updatedSynopsis = synObj;
+        }
+      } catch (e) {
+        console.warn("[ProjectPage] Failed to optimistically update synopsis:", e);
+      }
+
+      return { 
+        ...prev, 
+        characters: updatedChars,
+        synopsis: updatedSynopsis
+      };
     });
+
     const result = await updateCharacterAction(charId, updates);
     if (result.success) {
+      // Re-fetch to ensure all server-side triggers/standardization are synced
       fetchProjectDetailsAction(id).then(ref => { if(ref) setProject(ref); });
     }
     return result;
@@ -510,7 +564,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       isStreaming={isStreaming}
                     />
                   )}
-                  {scenarioTab === 'SIMILAR' && <CompsTab projectId={project.id} hasSynopsis={isSynopsisReady} storedComps={project.similar_works} metadata={metadata} />}
+                  {scenarioTab === 'UNIVERSE' && <UniverseTab project={project} onUpdateProject={handleUpdateProject} />}
+                  {scenarioTab === 'SIMILAR' && <CompsTab projectId={project.id} hasSynopsis={isSynopsisReady} />}
                   {scenarioTab === 'NAVIGATOR' && (
                     <NavigatorTab 
                       project={{
@@ -554,10 +609,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <div className="h-4 w-[1px] bg-white/10" />
               <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest italic">Arena Protocol v7.8</span>
             </div>
-            <div className="flex items-center space-x-4 opacity-50 px-4 py-1.5 bg-white/5 rounded-full border border-white/5">
-              <span className="text-[9px] font-black text-brand-gold tracking-widest">
-                {isStreaming ? `${project?.progress || 0}%` : 'STABLE'}
-              </span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-2 px-4 py-1.5 bg-white/5 rounded-full border border-white/5">
+                <HardDrive size={10} className={cn(
+                  autoSaveStatus === 'saving' ? "text-blue-400 animate-pulse" :
+                  autoSaveStatus === 'saved' ? "text-green-500" :
+                  "text-neutral-500"
+                )} />
+                <span className="text-[9px] font-black text-neutral-400 tracking-widest uppercase">
+                  {autoSaveStatus === 'saving' ? 'Saving Locally...' : 'Local Saved'}
+                </span>
+              </div>
+              <div className="px-4 py-1.5 bg-white/5 rounded-full border border-white/5">
+                <span className="text-[9px] font-black text-brand-gold tracking-widest">
+                  {isStreaming ? `${project?.progress || 0}%` : 'STABLE'}
+                </span>
+              </div>
             </div>
           </footer>
 
@@ -578,93 +645,42 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </button>
           )}
 
+          {masterMode === 'SCENARIO' && (
+            <button 
+              onClick={() => setIsRevisionModalOpen(true)} 
+              className="fixed bottom-24 left-24 px-4 h-10 bg-neutral-800/80 backdrop-blur border border-white/10 rounded-full flex items-center justify-center gap-2 text-white shadow-2xl z-50 hover:bg-neutral-700 transition-colors"
+            >
+              <Clock size={16} className="text-brand-gold" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Time Machine</span>
+            </button>
+          )}
+
           <ConfirmModal
             isOpen={isRegenerateModalOpen} onClose={() => setIsRegenerateModalOpen(false)} onConfirm={handleConfirmRegenerate}
             title="스토리 바이블 재생성" message="정말로 프로젝트를 재생성하시겠습니까? 현재의 시나리오와 에피소드가 모두 지워지고 새로운 서사가 집필됩니다."
             confirmText="집필 시작" variant="danger"
           />
 
-          {/* v11.13: System Insights Panel (Advanced Heartbeat) */}
-          <AnimatePresence>
-            {showInsights && (
-              <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[200] w-full max-w-2xl px-4">
-                <motion.div 
-                  initial={{ y: 50, opacity: 0, scale: 0.95 }}
-                  animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: 50, opacity: 0, scale: 0.95 }}
-                  className="bg-neutral-950/80 backdrop-blur-3xl border border-brand-gold/20 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ring-1 ring-white/5"
-                >
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-brand-gold animate-pulse" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">System Insights Mode</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest italic">Build V3.11.0</span>
-                      <div className="h-3 w-px bg-white/10" />
-                      <button 
-                        onClick={() => setShowInsights(false)}
-                        className="text-zinc-500 hover:text-white transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
-                      <p className="text-[7px] text-zinc-600 uppercase mb-1 font-black">Active Context</p>
-                      <p className="text-[10px] text-brand-gold font-bold truncate">
-                        {selectedEpisode ? `EP ${selectedEpisode.episode_number}` : "SELECT EPISODE"}
-                      </p>
-                    </div>
-                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
-                      <p className="text-[7px] text-zinc-600 uppercase mb-1 font-black">Beat Integrity</p>
-                      <p className="text-[10px] text-white/80 font-bold truncate">
-                        {pendingDraft ? "DRAFT ACTIVE" : selectedEpisode?.script_content ? "SCRIPT READY" : "AWAITING STORY"}
-                      </p>
-                    </div>
-                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
-                      <p className="text-[7px] text-zinc-600 uppercase mb-1 font-black">Structure Count</p>
-                      <p className="text-[10px] text-white font-bold">
-                        {project?.episode_count || 0} EPS / {project?.episodes?.length || 0} SYNCED
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="font-mono text-[9px] text-zinc-500 space-y-1.5 bg-black/60 p-3 rounded-xl border border-white/5 max-h-24 overflow-y-auto custom-scrollbar-gold">
-                    <div className="flex gap-2">
-                      <span className="text-zinc-700">[{new Date().toLocaleTimeString()}]</span>
-                      <p><span className="text-brand-gold">●</span> <span className="text-zinc-400">UI Thread:</span> Navigator Tab rendering with <span className="text-white">{project?.episode_count || "6"}</span> cards.</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-zinc-700">[{new Date().toLocaleTimeString()}]</span>
-                      <p><span className="text-purple-400">●</span> <span className="text-zinc-400">Data Sync:</span> Metadata loaded from <span className="text-white">{metadata ? "Synopsis JSON" : "Local State"}</span>.</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
-
-          {/* v11.13: Diagnostics Toggle Button */}
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[210]">
-            <button 
-              onClick={() => setShowInsights(!showInsights)}
-              className={cn(
-                "flex items-center gap-3 px-6 py-2.5 rounded-full border transition-all duration-500 group",
-                showInsights 
-                  ? "bg-brand-gold border-brand-gold text-black shadow-[0_0_30px_rgba(197,160,89,0.4)]" 
-                  : "bg-black/60 border-white/10 text-white/40 hover:border-brand-gold/50 hover:text-brand-gold backdrop-blur-xl"
-              )}
-            >
-              <div className={cn(
-                "w-1.5 h-1.5 rounded-full",
-                showInsights ? "bg-black animate-pulse" : "bg-brand-gold pulse-gold"
-              )} />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em]">Director's Heartbeat</span>
-            </button>
-          </div>
+          <RevisionModal
+            isOpen={isRevisionModalOpen}
+            onClose={() => setIsRevisionModalOpen(false)}
+            revisions={typeof project?.generated_content === 'string' ? (JSON.parse(project.generated_content).revisions || []) : (project?.generated_content?.revisions || [])}
+            onRestore={async (rev) => {
+              if (rev.snapshotType === 'script' && selectedEpisode && rev.episodeId === selectedEpisode.id) {
+                // Restore script
+                const newFullContent = rev.content;
+                const { updateEpisodeScriptContentAction } = await import('@/lib/actions/generation');
+                const result = await updateEpisodeScriptContentAction(selectedEpisode.id, project.id, newFullContent);
+                if (result.success) {
+                  setSelectedEpisode(prev => prev ? { ...prev, script_content: newFullContent } : null);
+                  setProject((prev: any) => ({
+                    ...prev,
+                    episodes: prev.episodes.map((e: any) => e.id === selectedEpisode.id ? { ...e, script_content: newFullContent } : e)
+                  }));
+                }
+              }
+            }}
+          />
 
           <div className="fixed top-0 left-20 w-full h-full pointer-events-none z-0">
             <div className="absolute top-[5%] left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] bg-brand-gold/[0.04] blur-[250px] rounded-full" />

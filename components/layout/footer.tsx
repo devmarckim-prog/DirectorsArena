@@ -17,11 +17,6 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="pointer-events-auto">
-        <span className="text-[9px] font-black text-neutral-700 uppercase tracking-[0.4em] italic">
-          v1.01 RELAY - SAFE POINT ESTABLISHED
-        </span>
-      </div>
     </footer>
   );
 }

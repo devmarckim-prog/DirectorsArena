@@ -53,6 +53,9 @@ export const StoryBeatOutputSchema = z.object({
   title: z.string().describe("Short, evocative title for this beat"),
   description: z.string().describe("1-sentence summary of what happens in this beat"),
   timestamp_label: z.string().describe("Relative page or time estimate, e.g., 'Page 15' or '00:15:00'"),
+  script_content: z.string().optional().describe(
+    "Full scene script in INT./EXT. format. Min 100 characters. Required for each beat."
+  ),
 });
 
 /**

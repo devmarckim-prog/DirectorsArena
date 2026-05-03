@@ -1,25 +1,31 @@
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
 
-const supabase = createClient(
-  "https://stfonaiuxavzbqwikcqb.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0Zm9uYWl1eGF2emJxd2lrY3FiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDMyNjcwMCwiZXhwIjoyMDg5OTAyNzAwfQ._g-OZFUnWxQrbuwNTmqyAduudYciX7vP4piq9xiHwgM"
-);
+async function list() {
+  const envFile = fs.readFileSync('.env.local', 'utf8');
+  const env = {};
+  envFile.split('\n').forEach(line => {
+    const [key, ...vals] = line.split('=');
+    if (key) env[key.trim()] = vals.join('=').trim();
+  });
+  const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
-async function listRecentProjects() {
-  console.log("Listing recent projects...");
   const { data, error } = await supabase
     .from('projects_v2')
-    .select('id, title, status, progress, created_at')
+    .select('*')
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(3);
 
-  if (error) {
-    console.error("List Error:", error);
-    return;
+  if (error) { console.error('Error:', error.message); return; }
+  if (data.length > 0) {
+    console.log('projects_v2 컬럼:', Object.keys(data[0]));
+    data.forEach(p => {
+      console.log(`\n[${p.id}]`);
+      Object.entries(p).forEach(([k, v]) => {
+        const val = typeof v === 'string' && v.length > 80 ? v.substring(0, 80) + '...' : v;
+        console.log(`  ${k}: ${JSON.stringify(val)}`);
+      });
+    });
   }
-
-  console.log("Recent projects:");
-  console.log(JSON.stringify(data, null, 2));
 }
-
-listRecentProjects();
+list();

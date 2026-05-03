@@ -81,38 +81,53 @@ export default function CreateProjectPage() {
   return (
     <div className="min-h-screen text-neutral-100 font-sans overflow-x-hidden relative selection:bg-brand-gold/30 selection:text-white pt-12">
       <main className="relative pt-4 pb-8 max-w-7xl mx-auto px-6 flex-1 flex flex-col">
-        <div className="flex justify-center mb-8 px-10">
-          <div className="flex items-center space-x-12">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex items-center space-x-4">
-                <div className={`w-1.5 h-1.5 rounded-full ${currentStep >= step ? 'bg-brand-gold' : 'bg-neutral-800'}`} />
-                <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${currentStep === step ? 'text-white' : 'text-neutral-700'}`}>
-                  Act {step}
-                </span>
-                {step < 4 && <div className="w-12 h-[1px] bg-neutral-900" />}
-              </div>
-            ))}
+        <div className="flex-1 flex flex-col pt-10">
+          {/* v11.0: New High-Fidelity Step Indicator positioned above the Title */}
+          <div className="w-full mb-10">
+            <div className="flex items-center space-x-12">
+              {[1, 2, 3, 4].map((step) => (
+                <button 
+                  key={step} 
+                  onClick={() => setCurrentStep(step)}
+                  className="group flex items-center space-x-4 outline-none"
+                >
+                  <div className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                    currentStep === step ? 'bg-brand-gold scale-125 shadow-[0_0_10px_rgba(197,160,89,0.8)]' : 
+                    currentStep > step ? 'bg-brand-gold/40' : 'bg-neutral-800'
+                  )} />
+                  <span className={cn(
+                    "text-[10px] font-black uppercase tracking-[0.4em] transition-all duration-300",
+                    currentStep === step ? 'text-white translate-x-1' : 'text-neutral-700 group-hover:text-neutral-400'
+                  )}>
+                    Act {step}
+                  </span>
+                  {step < 4 && <div className="w-12 h-[1px] bg-neutral-900 ml-4" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <AnimatePresence mode="wait">
+              {currentStep === 1 && (
+                <StepOne key="step1" formData={formData} setFormData={setFormData} onNext={nextStep} />
+              )}
+              {currentStep === 2 && (
+                <StepTwo key="step2" formData={formData} setFormData={setFormData} onNext={nextStep} />
+              )}
+              {currentStep === 3 && (
+                <StepThree key="step3" formData={formData} setFormData={setFormData} onNext={nextStep} />
+              )}
+              {currentStep === 4 && (
+                <StepFour key="step4" formData={formData} setFormData={setFormData} onProduce={handleProduce} />
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
-        <div className="flex-1">
-          <AnimatePresence mode="wait">
-            {currentStep === 1 && (
-              <StepOne key="step1" formData={formData} setFormData={setFormData} onNext={nextStep} />
-            )}
-            {currentStep === 2 && (
-              <StepThree key="step3" formData={formData} setFormData={setFormData} onNext={nextStep} />
-            )}
-            {currentStep === 3 && (
-              <StepTwo key="step2" formData={formData} setFormData={setFormData} onNext={nextStep} />
-            )}
-            {currentStep === 4 && (
-              <StepFour key="step4" formData={formData} setFormData={setFormData} onProduce={handleProduce} />
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div className="mt-8 mb-12 mx-auto flex items-center space-x-6 z-40 bg-neutral-950/40 backdrop-blur-md px-8 py-4 rounded-full border border-white/5 shadow-2xl">
+        {/* v11.0: Fixed Bottom Navigation Bar for consistent 'Void' control */}
+        <div className="fixed bottom-[73px] left-1/2 -translate-x-1/2 flex items-center space-x-6 z-[100] bg-neutral-950/60 backdrop-blur-3xl px-10 py-5 rounded-full border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
            {currentStep > 1 && (
              <button onClick={prevStep} className="text-neutral-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest px-4">
                Back
@@ -122,26 +137,26 @@ export default function CreateProjectPage() {
            {currentStep < 4 ? (
              <button 
                onClick={nextStep}
-               className="group flex items-center space-x-3 bg-brand-gold px-8 py-3.5 rounded-full hover:scale-105 transition-all shadow-[0_0_30px_rgba(197,160,89,0.3)]"
+               className="group flex items-center space-x-4 bg-brand-gold px-10 py-4 rounded-full hover:scale-105 transition-all shadow-[0_0_40px_rgba(197,160,89,0.3)]"
              >
-               <span className="text-black text-[11px] font-black uppercase tracking-widest leading-none">
+               <span className="text-black text-[11px] font-black uppercase tracking-[0.2em] leading-none">
                  Next Act
                </span>
-               <ArrowRight size={12} className="text-black ml-1 group-hover:translate-x-1 transition-transform" />
+               <ArrowRight size={14} strokeWidth={3} className="text-black ml-1 group-hover:translate-x-1 transition-transform" />
              </button>
            ) : (
              <button 
                onClick={handleProduce}
                disabled={isProducing}
                className={cn(
-                 "group flex items-center space-x-3 bg-brand-gold px-12 py-3.5 rounded-full hover:scale-105 transition-all shadow-[0_0_50px_rgba(197,160,89,0.4)]",
+                 "group flex items-center space-x-4 bg-brand-gold px-14 py-4 rounded-full hover:scale-105 transition-all shadow-[0_0_60px_rgba(197,160,89,0.4)]",
                  isProducing && "opacity-50 cursor-not-allowed"
                )}
              >
-               <span className="text-black text-[11px] font-black uppercase tracking-widest leading-none">
+               <span className="text-black text-[11px] font-black uppercase tracking-[0.2em] leading-none">
                  Produce Scenario
                </span>
-               <Sparkles size={12} className="text-black ml-1 animate-pulse" />
+               <Sparkles size={14} className="text-black ml-1 animate-pulse" />
              </button>
            )}
         </div>

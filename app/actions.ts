@@ -29,6 +29,12 @@ export async function resetPromptsToDefaultAction() {
 export async function fetchAdminSettings() {
   return adminActions.fetchAdminSettings();
 }
+export async function fetchGenreImagesAction() {
+  return adminActions.fetchGenreImagesAction();
+}
+export async function updateSchemaFieldsAction(fields: Record<string, any>) {
+  return adminActions.updateSchemaFieldsAction(fields);
+}
 
 // Generation Actions
 export async function persistGenerationAction(projectId: string, generation: any) {
@@ -45,6 +51,9 @@ export async function updateEpisodeScriptContentAction(episodeId: string, projec
 }
 export async function generateEpisodeSceneDraftAction(projectId: string, episodeId: string, instruction: string, currentScript: string = "") {
   return generationActions.generateEpisodeSceneDraftAction(projectId, episodeId, instruction, currentScript);
+}
+export async function ensureEpisodeExistsAction(projectId: string, episodeNumber: number, title?: string) {
+  return generationActions.ensureEpisodeExistsAction(projectId, episodeNumber, title);
 }
 
 // Project Actions
@@ -68,6 +77,9 @@ export async function purgeAllProjectsAction() {
 }
 export async function fetchSimilarWorksAction(projectId: string) {
   return projectActions.fetchSimilarWorksAction(projectId);
+}
+export async function fetchSimilarWorksPageAction(projectId: string, offset: number = 0) {
+  return projectActions.fetchSimilarWorksPageAction(projectId, offset);
 }
 export async function updateCharacterAction(id: string, updates: any) {
   return projectActions.updateCharacterAction(id, updates);

@@ -32,7 +32,7 @@ export function StepTwo({ formData, setFormData, onNext }: StepTwoProps) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col items-center">
+    <div className="w-full flex flex-col items-center">
       <div className="w-full flex justify-between items-end mb-12">
         <div className="text-left">
           <motion.h2 
