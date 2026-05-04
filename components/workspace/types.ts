@@ -44,4 +44,5 @@ export interface Project {
     synopsis: string;
     narrativeConflicts: { type: string, description: string }[];
   };
+  generated_content?: any;
 }

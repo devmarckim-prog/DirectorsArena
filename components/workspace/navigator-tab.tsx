@@ -211,10 +211,10 @@ export function NavigatorTab(props: {
     if (script && script.length > 10) {
       console.log("[Navigator] v11.29 Emergency Parsing Script (Len):", script.length);
       const sceneRegex = /(?=SCENE\s+\d+|\[SCENE\s+\d+\]|INT\.|EXT\.|S#\d+)/gi;
-      const parts = script.split(sceneRegex).filter(p => p.trim().length > 10);
+      const parts = script.split(sceneRegex).filter((p: string) => p.trim().length > 10);
 
       if (parts.length > 0) {
-        return parts.map((content, idx) => {
+        return parts.map((content: string, idx: number) => {
           const lines = content.trim().split('\n');
           const title = lines[0].replace(/[*#]/g, '').trim().substring(0, 50);
           return {
@@ -263,7 +263,7 @@ export function NavigatorTab(props: {
   useEffect(() => {
     if (sceneList.length > 0) {
       const firstScene = sceneList[0];
-      if (!selectedBeat || !sceneList.some(s => s.id === selectedBeat.id)) {
+      if (!selectedBeat || !sceneList.some((s: any) => s.id === selectedBeat.id)) {
         console.log("[Navigator] v11.30 Force Auto-select:", firstScene.title);
         setSelectedBeat(firstScene);
       }

@@ -22,7 +22,8 @@ export function CreditGrantForm() {
       setMessage({ type: 'success', text: `${amount} credits granted to ${email} successfully.` });
       // Reset form would be nice, but for simplicity we show success message
     } else {
-      setMessage({ type: 'error', text: result.error || 'Failed to grant credits.' });
+      const errorMsg = typeof result.error === 'string' ? result.error : (result.error as any)?.message;
+      setMessage({ type: 'error', text: errorMsg || 'Failed to grant credits.' });
     }
     setLoading(false);
   }

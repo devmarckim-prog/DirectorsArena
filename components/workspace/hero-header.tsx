@@ -82,12 +82,12 @@ export function HeroHeader({
 
   const handleExportFDX = () => {
     const allScripts = project.episodes?.map(e => e.script_content).filter(Boolean).join('\n\n') || "";
-    exportToFDX(project.title, allScripts);
+    exportToFDX(project.title || "Untitled", allScripts);
   };
 
   const handleExportDOCX = () => {
     const allScripts = project.episodes?.map(e => e.script_content).filter(Boolean).join('\n\n') || "";
-    exportToDOCX(project.title, allScripts);
+    exportToDOCX(project.title || "Untitled", allScripts);
   };
 
   const handleSave = async () => {

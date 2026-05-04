@@ -178,8 +178,7 @@ export default function AdminSettingsPage() {
             </div>
             
             <SchemaFieldDesigner 
-              fields={settings.schema_fields} 
-              onUpdate={(fields) => setSettings({...settings, schema_fields: fields})}
+              initialFields={settings.schema_fields} 
             />
           </section>
         )}
