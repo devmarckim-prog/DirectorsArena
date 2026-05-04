@@ -16,12 +16,29 @@ const supabase = createClient(
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 
+import { authGuard } from '@/lib/auth/guard';
+import { deductCredits } from '@/lib/credits/deduct';
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { response, user } = await authGuard();
+  if (response || !user) return response || new Response('Unauthorized', { status: 401 });
+
   const { id: projectId } = await params;
-  console.log(`--- [OMA] IGNITION PULSE START: ${projectId} ---`);
+  
+  // v4.0: Atomic Credit Deduction before Ignition
+  const creditResult = await deductCredits(user.id, 'generate');
+  if (!creditResult.success) {
+    return new Response(JSON.stringify({ 
+      error: 'Insufficient credits', 
+      required: 10,
+      code: 'INSUFFICIENT_CREDITS' 
+    }), { status: 402 });
+  }
+
+  console.log(`--- [OMA] IGNITION PULSE START: ${projectId} (User: ${user.email}) ---`);
 
   try {
     const { data: adminSettings } = await supabase

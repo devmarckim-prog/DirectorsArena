@@ -3,7 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -26,6 +27,12 @@ export function ConfirmModal({
   cancelText = "취소",
   variant = "danger"
 }: ConfirmModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
   
   // Close on Escape key
   useEffect(() => {
@@ -36,7 +43,9 @@ export function ConfirmModal({
     return () => window.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
-  return (
+  if (!mounted) return null;
+
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -46,11 +55,11 @@ export function ConfirmModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[99]"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999]"
           />
 
           {/* Modal Container */}
-          <div className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none p-6">
+          <div className="fixed inset-0 flex items-center justify-center z-[10000] pointer-events-none p-6">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -119,4 +128,6 @@ export function ConfirmModal({
       )}
     </AnimatePresence>
   );
+
+  return createPortal(modalContent, document.body);
 }

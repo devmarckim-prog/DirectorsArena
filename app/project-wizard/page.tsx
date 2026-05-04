@@ -10,12 +10,15 @@ import { StepThree } from "@/components/project-wizard/step-three";
 import { StepFour } from "@/components/project-wizard/step-four";
 import { createProjectAction } from "@/app/actions";
 import { cn } from "@/lib/utils";
+import { InsufficientCreditsModal } from "@/components/ui/insufficient-credits-modal";
 
 export default function CreateProjectPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProducing, setIsProducing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [requiredCredits, setRequiredCredits] = useState(10);
   const [formData, setFormData] = useState({
     platform: "ott",
     genres: ["Noir"],
@@ -31,11 +34,6 @@ export default function CreateProjectPage() {
 
   const handleProduce = useCallback(async () => {
     setIsProducing(true);
-    
-    // Credit Deduction (20 C)
-    const currentCredits = parseInt(localStorage.getItem("directors_arena_credits") || "1200");
-    const newCredits = Math.max(0, currentCredits - 20);
-    localStorage.setItem("directors_arena_credits", newCredits.toString());
 
     try {
         // v4.5 Supabase-First: Creation (0%)
@@ -51,7 +49,15 @@ export default function CreateProjectPage() {
         // Phase 2: Engine Ignition (Targeting 10% -> 11%+)
         const igniteResponse = await fetch(`/api/ignite/${result.projectId}`, { method: 'POST' });
         
-        if (igniteResponse.body) {
+        if (igniteResponse.status === 402) {
+            const errData = await igniteResponse.json();
+            setIsProducing(false);
+            setRequiredCredits(errData.required || 10);
+            setShowCreditModal(true);
+            return;
+        }
+
+        if (igniteResponse.ok && igniteResponse.body) {
             const reader = igniteResponse.body.getReader();
             const decoder = new TextDecoder();
             
@@ -222,6 +228,12 @@ export default function CreateProjectPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <InsufficientCreditsModal 
+        isOpen={showCreditModal} 
+        onClose={() => setShowCreditModal(false)} 
+        requiredCredits={requiredCredits}
+      />
     </div>
   );
 }

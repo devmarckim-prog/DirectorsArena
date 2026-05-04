@@ -47,6 +47,9 @@ export async function getAdminSettingsAction() {
       prompt_episode_script: DEFAULT_SCRIPT_PROMPT,
       prompt_scenario_rewrite: DEFAULT_REWRITE_PROMPT,
       schema_fields: DEFAULT_SCHEMA_FIELDS,
+      cost_generate: 10,
+      cost_rewrite: 3,
+      cost_similar: 5,
     };
     await supabase.from('admin_settings').insert(defaults);
     return defaults;
@@ -161,7 +164,109 @@ export async function fetchAdminSettings() {
   return await getAdminSettingsAction();
 }
 
-export async function insertSampleProjectsAction() {
-  // Logic for elite sample sync
-  return { success: true };
+export async function fetchAdminDashboardStats() {
+  const supabase = createAdminClient();
+  
+  const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
+  
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const { count: todayJoiners } = await supabase
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', today.toISOString());
+
+  const { count: paidSubscribers } = await supabase
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .neq('plan', 'free');
+
+  const { data: recentUsers } = await supabase
+    .from('users')
+    .select('id, email, full_name, plan, credits, created_at')
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  const { data: usageLogs } = await supabase
+    .from('credit_transactions')
+    .select('amount')
+    .lt('amount', 0)
+    .gte('created_at', today.toISOString());
+  
+  const todayCreditUsage = Math.abs(usageLogs?.reduce((sum, log) => sum + log.amount, 0) || 0);
+
+  return {
+    totalUsers: totalUsers || 0,
+    todayJoiners: todayJoiners || 0,
+    paidSubscribers: paidSubscribers || 0,
+    todayCreditUsage,
+    recentUsers: recentUsers || []
+  };
+}
+
+export async function fetchUserListAction(page: number = 1, search?: string) {
+  const supabase = createAdminClient();
+  const PAGE_SIZE = 20;
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  let query = supabase
+    .from('users')
+    .select('id, email, full_name, plan, role, credits, created_at, status', { count: 'exact' });
+
+  if (search) {
+    query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
+  }
+
+  const { data, count, error } = await query
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  return { users: data || [], totalCount: count || 0, error };
+}
+
+export async function toggleUserStatusAction(userId: string, currentStatus: string) {
+  const supabase = createAdminClient();
+  const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+  const { error } = await supabase
+    .from('users')
+    .update({ status: newStatus })
+    .eq('id', userId);
+  
+  revalidatePath('/admin/users');
+  return { success: !error, error };
+}
+
+export async function manualCreditGrantAction(email: string, amount: number, memo: string) {
+  const supabase = createAdminClient();
+  
+  // 1. 유저 조회
+  const { data: user } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', email)
+    .single();
+    
+  if (!user) return { success: false, error: 'User not found' };
+
+  // 2. RPC 호출 (충전)
+  const { error } = await supabase.rpc('grant_user_credits', {
+    p_user_id: user.id,
+    p_amount: amount,
+    p_reason: 'manual_grant',
+    p_memo: memo // SQL 함수에 메모 필드 추가 필요 시 반영
+  });
+
+  revalidatePath('/admin/credits');
+  return { success: !error, error };
+}
+
+export async function fetchLoginLogsAction() {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from('login_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return data || [];
 }

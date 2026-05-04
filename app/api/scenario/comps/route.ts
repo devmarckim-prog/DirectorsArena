@@ -24,7 +24,22 @@ const CompsOutputSchema = z.object({
 
 // (Simplified: Moved model validation to lib/ai/models.ts)
 
+import { authGuard } from '@/lib/auth/guard';
+import { deductCredits } from '@/lib/credits/deduct';
+
 export async function POST(request: Request) {
+  const { response, user } = await authGuard();
+  if (response || !user) return response || new Response('Unauthorized', { status: 401 });
+
+  // v4.0: Atomic Credit Deduction before Comps Search
+  const creditResult = await deductCredits(user.id, 'similar');
+  if (!creditResult.success) {
+    return new Response(JSON.stringify({ 
+      error: 'Insufficient credits', 
+      code: 'INSUFFICIENT_CREDITS' 
+    }), { status: 402 });
+  }
+
   try {
     const { projectId } = await request.json();
     if (!projectId) return new Response("Missing projectId", { status: 400 });

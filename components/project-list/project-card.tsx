@@ -298,7 +298,10 @@ export function ProjectCard({
                     </div>
 
                     {/* Bottom area - Title matched to completed state */}
-                    <div className="absolute top-[210px] left-0 right-0 p-5 pt-3.5 flex flex-col space-y-2.5">
+                    <div 
+                      className="absolute top-[210px] left-0 right-0 p-5 pt-3.5 flex flex-col space-y-2.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                        <h3 className="text-[18px] font-bold text-white/40 tracking-tight leading-tight line-clamp-1 italic">
                         {displayTitle.replace(/\s*[(\uFF08].*?[)\uFF09]\s*/g, "").trim()}
                       </h3>
@@ -323,7 +326,10 @@ export function ProjectCard({
              )}
     
              {!isBaking && (
-                <div className="absolute top-[210px] left-0 right-0 bottom-0 p-5 pt-3.5 flex flex-col justify-between z-10">
+                <div 
+                   className="absolute top-[210px] left-0 right-0 bottom-0 p-5 pt-3.5 flex flex-col justify-between z-10"
+                   onClick={(e) => e.stopPropagation()}
+                 >
                    <div className="space-y-2.5">
                      <div className="flex items-start justify-between">
                         <div className="flex flex-col space-y-1">
@@ -354,7 +360,10 @@ export function ProjectCard({
                      
                      <div className="flex items-center justify-between px-0.5">
                        <div className="flex items-center space-x-5">
-                         <button className="text-neutral-700 hover:text-white transition-colors">
+                         <button 
+                            className="text-neutral-700 hover:text-white transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                         >
                            <Edit3 size={14} strokeWidth={1.5} />
                          </button>
                           <button 

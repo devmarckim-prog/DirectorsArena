@@ -21,7 +21,22 @@ const RewriteRequestSchema = z.object({
 // [SECURITY] Allowed model IDs whitelist
 const ALLOWED_MODELS = ['claude-sonnet-4-6', 'claude-sonnet-3-5', 'claude-opus-4-5', 'claude-haiku-4-5-20251001'];
 
+import { authGuard } from '@/lib/auth/guard';
+import { deductCredits } from '@/lib/credits/deduct';
+
 export async function POST(req: Request) {
+  const { response, user } = await authGuard();
+  if (response || !user) return response || new Response('Unauthorized', { status: 401 });
+
+  // v4.0: Atomic Credit Deduction before Rewrite
+  const creditResult = await deductCredits(user.id, 'rewrite');
+  if (!creditResult.success) {
+    return new Response(JSON.stringify({ 
+      error: 'Insufficient credits', 
+      code: 'INSUFFICIENT_CREDITS' 
+    }), { status: 402 });
+  }
+
   // [SECURITY] IP-based rate limiting: 10 rewrites per minute per IP
   const ip = getClientIp(req);
   if (isRateLimited(ip, RATE_LIMITS.REWRITE)) {

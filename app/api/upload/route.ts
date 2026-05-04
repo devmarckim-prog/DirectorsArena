@@ -5,7 +5,12 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+import { authGuard } from '@/lib/auth/guard';
+
 export async function POST(request: Request) {
+  const { response } = await authGuard();
+  if (response) return response;
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;

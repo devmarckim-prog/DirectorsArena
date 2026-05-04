@@ -3,26 +3,59 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { logoutAction } from "@/app/actions";
 
 export function AuthNav() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [credits, setCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // 1. Initial Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) fetchCredits(currentUser.id);
       setLoading(false);
     });
 
+    const fetchCredits = async (userId: string) => {
+      const { data } = await supabase
+        .from('users')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+      if (data) setCredits(data.credits);
+    };
+
     // 2. Listen for Auth Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) fetchCredits(currentUser.id);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // 3. Real-time Credits Update
+    const creditsChannel = supabase
+      .channel('public:users')
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'users',
+        filter: `id=eq.${user?.id}`
+      }, (payload) => {
+        if (payload.new && 'credits' in payload.new) {
+          setCredits(payload.new.credits);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(creditsChannel);
+    };
+  }, [user?.id]);
 
   const handleLogin = async () => {
     // We will use standard Google OAuth in Supabase
@@ -35,8 +68,7 @@ export function AuthNav() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
+    await logoutAction();
   };
 
   // Unlocked globally for verification purposes as requested
@@ -65,7 +97,7 @@ export function AuthNav() {
            </button>
            <div className="flex items-center space-x-3 px-5 py-2 bg-brand-gold/5 border border-brand-gold/10 rounded-full">
              <div className="w-2 h-2 bg-brand-gold rounded-full animate-pulse shadow-[0_0_10px_rgba(197,160,89,0.5)]" />
-             <span id="credits-badge" className="text-brand-gold text-xs">1,200 Credits</span>
+             <span id="credits-badge" className="text-brand-gold text-xs">{credits.toLocaleString()} Credits</span>
            </div>
         </div>
       ) : (

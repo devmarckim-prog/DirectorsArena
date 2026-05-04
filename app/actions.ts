@@ -3,6 +3,24 @@
 import * as adminActions from "@/lib/actions/admin";
 import * as generationActions from "@/lib/actions/generation";
 import * as projectActions from "@/lib/actions/project";
+import * as authActions from "@/lib/actions/auth";
+
+// Auth Actions
+export async function loginAction(formData: FormData) {
+  return authActions.loginAction(formData);
+}
+export async function signupAction(formData: FormData) {
+  return authActions.signupAction(formData);
+}
+export async function logoutAction() {
+  return authActions.logoutAction();
+}
+export async function getUserSettingsAction() {
+  return authActions.getUserSettingsAction();
+}
+export async function updateUserSettingsAction(settings: any) {
+  return authActions.updateUserSettingsAction(settings);
+}
 
 // Admin Actions
 export async function getAdminSettingsAction() {
@@ -17,8 +35,20 @@ export async function fetchAdminStatsAction() {
 export async function seedSystemAssetsAction() {
   return adminActions.seedSystemAssetsAction();
 }
-export async function insertSampleProjectsAction() {
-  return adminActions.insertSampleProjectsAction();
+export async function fetchAdminDashboardStats() {
+  return adminActions.fetchAdminDashboardStats();
+}
+export async function fetchUserListAction(page: number = 1, search?: string) {
+  return adminActions.fetchUserListAction(page, search);
+}
+export async function toggleUserStatusAction(userId: string, currentStatus: string) {
+  return adminActions.toggleUserStatusAction(userId, currentStatus);
+}
+export async function manualCreditGrantAction(email: string, amount: number, memo: string) {
+  return adminActions.manualCreditGrantAction(email, amount, memo);
+}
+export async function fetchLoginLogsAction() {
+  return adminActions.fetchLoginLogsAction();
 }
 export async function fetchSystemAssetsAction(type: string = 'dummy_image') {
   return adminActions.fetchSystemAssetsAction(type);

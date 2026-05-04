@@ -7,7 +7,7 @@ import { ProjectGridSlot } from "@/components/project-list/project-grid-slot";
 import { ProjectCard, Project } from "@/components/project-list/project-card";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { Database, Sparkles } from "lucide-react";
-import { fetchProjectsAction, deleteProjectAction, insertSampleProjectsAction, fetchGenreImagesAction } from "@/app/actions";
+import { fetchProjectsAction, deleteProjectAction, fetchGenreImagesAction } from "@/app/actions";
 
 export default function ProjectListPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -42,16 +42,7 @@ export default function ProjectListPage() {
     async function loadData() {
       try {
         const data = await fetchProjectsAction();
-        
-        if (!data || data.length === 0) {
-          const syncResult = await insertSampleProjectsAction();
-          if (syncResult.success) {
-            const refreshedData = await fetchProjectsAction();
-            setProjects(refreshedData as Project[]);
-          }
-        } else {
-          setProjects(data as Project[]);
-        }
+        setProjects(data as Project[]);
 
         // DB에서 장르별 이미지 맵 로드
         const images = await fetchGenreImagesAction();
@@ -60,10 +51,6 @@ export default function ProjectListPage() {
       } catch (error) {
         console.error("Failed to load dashboard data", error);
       } finally {
-        const savedCredits = localStorage.getItem("directors_arena_credits");
-        if (savedCredits) {
-          setCredits(parseInt(savedCredits));
-        }
         setIsLoading(false);
       }
     }
