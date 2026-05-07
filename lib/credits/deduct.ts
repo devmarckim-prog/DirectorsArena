@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 
-export type CreditAction = 'generate' | 'rewrite' | 'similar';
+export type CreditAction = 'generate' | 'rewrite' | 'similar' | 'script';
 
 /**
  * 원자적(Atomic) 크레딧 차감 유틸리티
@@ -11,44 +11,33 @@ export type CreditAction = 'generate' | 'rewrite' | 'similar';
 export async function deductCredits(userId: string, action: CreditAction) {
   const supabase = createAdminClient();
 
-  // 1. 어드민 설정에서 해당 액션의 비용 조회
+  // 1. 어드민 설정 조회 (안전하게 전체 조회 후 필드 접근)
   const { data: settings } = await supabase
     .from('admin_settings')
-    .select('cost_generate, cost_rewrite, cost_similar')
+    .select('*')
     .single();
 
   const costMap: Record<CreditAction, number> = {
     generate: settings?.cost_generate ?? 10,
     rewrite: settings?.cost_rewrite ?? 3,
     similar: settings?.cost_similar ?? 5,
+    script: settings?.cost_script ?? 7, 
   };
 
   const amountToDeduct = costMap[action];
 
-  // 2. Atomic Update: 잔액 확인과 차감을 동시에 수행
-  // RPC를 사용하거나 직접 SQL을 실행할 수 있으나, 여기서는 복잡도를 낮추기 위해 postgres 쿼리를 직접 타격하는 로직을 시뮬레이션합니다.
-  // 실제로는 supabase.rpc()를 사용하는 것이 가장 안전합니다.
-  
-  const { data: updatedUser, error: updateError } = await supabase
-    .from('users')
-    .update({ 
-      credits: supabase.rpc('decrement_credits', { user_id: userId, amount: amountToDeduct }) 
-    })
-    .select('credits')
-    .single();
-
-  // Note: 위 방식보다 더 확실한 SQL 방식은 RPC 함수를 정의하는 것입니다.
-  // 아래는 RPC 함수 'deduct_user_credits'가 DB에 정의되어 있다고 가정하고 호출하는 방식입니다.
+  // 2. Atomic Update via RPC
+  // 'deduct_user_credits' 함수는 migration 20240503_auth_and_credits.sql에 정의되어 있음
   const { data, error } = await supabase.rpc('deduct_user_credits', {
     p_user_id: userId,
     p_amount: amountToDeduct,
-    p_reason: action
+    p_reason: `Action: ${action}`
   });
 
   if (error || !data?.success) {
     return { 
       success: false, 
-      error: error?.message || 'Insufficient credits', 
+      error: error?.message || data?.error || 'Insufficient credits', 
       statusCode: 402 
     };
   }

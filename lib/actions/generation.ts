@@ -9,6 +9,8 @@ import type { ProjectGeneration, EpisodeSceneDraft } from "@/lib/schemas/generat
 import { logApiUsage } from "@/lib/telemetry";
 import { getAdminSettingsAction } from "./admin";
 import { getResolvedModelId } from "@/lib/ai/models";
+import { authGuard } from "@/lib/auth/guard";
+import { deductCredits } from "@/lib/credits/deduct";
 
 import { persistProjectGeneration } from "../repository/generation";
 
@@ -87,6 +89,15 @@ export async function generateEpisodeScriptAction(
   episodeId: string,
   episodeNumber: number
 ) {
+  const { user, response: authResponse } = await authGuard();
+  if (!user) return { success: false, error: "로그인이 필요합니다." };
+
+  // v4.5: Deduct credits before script generation
+  const creditResult = await deductCredits(user.id, 'script');
+  if (!creditResult.success) {
+    return { success: false, error: "크레딧이 부족합니다. (필요: 7C)", code: 'INSUFFICIENT_CREDITS' };
+  }
+
   try {
     const supabase = createAdminClient();
     const adminSettings = await getAdminSettingsAction();
@@ -108,7 +119,8 @@ export async function generateEpisodeScriptAction(
       .eq('episode_id', episodeId)
       .order('scene_number', { ascending: true });
 
-    let systemPrompt = `당신은 세계적인 드라마 작가이자 감독입니다.
+    // v11.20: Use dynamic administrative script prompt
+    let systemPrompt = adminSettings.prompt_episode_script || `당신은 세계적인 드라마 작가이자 감독입니다.
 제공된 [스토리 바이블]과 [캐릭터 설정], 그리고 [에피소드 요약]을 바탕으로 에피소드 ${episodeNumber}의 전체 대본을 집필하세요.
 
 [규칙]
@@ -280,8 +292,54 @@ export async function generateEpisodeSceneDraftAction(
   episodeId: string, 
   instruction: string, 
   currentScript: string = ""
-): Promise<{ success: boolean; draft?: EpisodeSceneDraft; error?: string }> {
-    // Logic extracted from original actions.ts
-    // currentScript can be used as context for the AI draft generation
-    return { success: true };
+): Promise<{ success: boolean; draft?: EpisodeSceneDraft; error?: string; code?: string }> {
+  const { user } = await authGuard();
+  if (!user) return { success: false, error: "로그인이 필요합니다." };
+
+  // v4.5: Deduct credits for rewrite/draft (cheaper)
+  const creditResult = await deductCredits(user.id, 'rewrite');
+  if (!creditResult.success) {
+    return { success: false, error: "크레딧이 부족합니다. (필요: 3C)", code: 'INSUFFICIENT_CREDITS' };
+  }
+
+  try {
+    const supabase = createAdminClient();
+    const adminSettings = await getAdminSettingsAction();
+    const modelId = getResolvedModelId(adminSettings.model_id_fast, 'claude-3-5-sonnet-latest');
+
+    const { data: project } = await supabase.from('projects_v2').select('*').eq('id', projectId).single();
+    const { data: episode } = await supabase.from('episodes_v2').select('*').eq('id', episodeId).single();
+
+    // v11.20: Use dynamic administrative rewrite prompt
+    const systemPrompt = adminSettings.prompt_scenario_rewrite || `당신은 시나리오 보조 작가입니다. 
+사용자의 지시사항에 따라 에피소드 대본의 특정 씬을 초안(Draft)으로 작성하거나 수정하십시오.
+다른 설명 없이 오직 JSON 형식으로만 응답하세요.`;
+
+    const { object: result, usage } = await generateObject({
+      model: anthropic(modelId),
+      schema: EpisodeSceneDraftSchema,
+      system: systemPrompt,
+      prompt: `프로젝트: ${project.title}
+에피소드: ${episode.title}
+현재 대본 문맥: ${currentScript.slice(-2000)}
+지시사항: ${instruction}
+
+위 내용을 바탕으로 새로운 씬 초안을 작성하십시오.`,
+    });
+
+    await logApiUsage({ 
+      projectId, 
+      modelId, 
+      featureName: `Scene Draft`, 
+      usage: {
+        promptTokens: (usage as any).promptTokens || 0,
+        completionTokens: (usage as any).completionTokens || 0
+      }
+    });
+
+    return { success: true, draft: result };
+  } catch (err: any) {
+    console.error("Scene Draft Error:", err);
+    return { success: false, error: err.message };
+  }
 }

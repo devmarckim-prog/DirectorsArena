@@ -41,41 +41,63 @@ export default async function AdminUsersPage({
             <thead>
               <tr className="border-b border-white/5 text-neutral-600">
                 <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">User Details</th>
-                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Permissions</th>
-                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Credits</th>
-                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Status</th>
-                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-center">Joined Date</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-center">Engagement</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-center">Revenue</th>
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-center">Credits</th>
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-right">Status / Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-white/[0.02] transition-colors group">
                   <td className="px-10 py-6">
-                    <p className="text-xs font-black text-white">{user.full_name || 'Anonymous'}</p>
-                    <p className="text-[10px] font-bold text-neutral-500">{user.email}</p>
-                    <p className="text-[8px] font-bold text-neutral-700 mt-1 uppercase tracking-widest">Enrolled: {format(new Date(user.created_at), "yyyy.MM.dd")}</p>
-                  </td>
-                  <td className="px-10 py-6">
-                    <div className="flex flex-col space-y-1">
-                       <span className="text-[9px] font-black uppercase tracking-widest text-brand-gold">{user.role}</span>
-                       <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest">{user.plan} plan</span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-neutral-900 border border-white/5 flex items-center justify-center text-[10px] font-black text-brand-gold">
+                        {user.full_name?.[0] || 'A'}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-white">{user.full_name || 'Anonymous'}</p>
+                        <p className="text-[10px] font-bold text-neutral-500">{user.email}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[8px] font-black uppercase tracking-widest text-brand-gold">{user.role}</span>
+                          <span className="text-neutral-800 text-[8px]">•</span>
+                          <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest">{user.plan} plan</span>
+                        </div>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-10 py-6">
-                    <span className="text-xs font-bold text-neutral-400">{user.credits.toLocaleString()} C</span>
+                  <td className="px-8 py-6 text-center">
+                    <p className="text-[10px] font-bold text-neutral-400">{format(new Date(user.created_at), "yyyy.MM.dd")}</p>
+                    <p className="text-[8px] font-bold text-neutral-700 uppercase mt-1">{format(new Date(user.created_at), "HH:mm")}</p>
                   </td>
-                  <td className="px-10 py-6">
-                    <span className={cn(
-                      "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
-                      user.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                    )}>
-                      {user.status || 'active'}
-                    </span>
+                  <td className="px-8 py-6 text-center">
+                    <div className="inline-flex flex-col items-center">
+                      <span className="text-xs font-black text-white">{(user as any).projectCount}</span>
+                      <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest mt-1">Projects</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    <div className="inline-flex flex-col items-center">
+                      <span className="text-xs font-black text-emerald-500">₩{((user as any).totalPayments * 10).toLocaleString()}</span>
+                      <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest mt-1">Total Paid</span>
+                    </div>
+                  </td>
+                  <td className="px-10 py-6 text-center">
+                    <CreditGrantButton 
+                      userEmail={user.email} 
+                      currentCredits={user.credits}
+                    />
                   </td>
                   <td className="px-10 py-6 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <CreditGrantButton userEmail={user.email} />
-                      <UserStatusButton userId={user.id} currentStatus={user.status || 'active'} />
+                    <div className="flex items-center justify-end gap-4">
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+                        (user as any).status === 'disabled' ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
+                      )}>
+                        {(user as any).status || 'active'}
+                      </span>
+                      <UserStatusButton userId={user.id} currentStatus={(user as any).status || 'active'} />
                     </div>
                   </td>
                 </tr>

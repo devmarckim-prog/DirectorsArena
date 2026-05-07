@@ -53,18 +53,13 @@ export async function updateSession(request: NextRequest) {
 
   // 3. Admin Guard
   if (user && url.pathname.startsWith('/admin')) {
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    // v10.0: Use app_metadata for secure, DB-less role checking
+    const role = user.app_metadata?.role;
+    const isMasterAdmin = role === 'admin';
 
-    // God-Mode Exception for Lead Developer
-    const isMasterDev = user.email === 'dev.marckim@gmail.com';
-
-    if (!isMasterDev && profile?.role !== 'admin') {
+    if (!isMasterAdmin) {
       url.pathname = '/'
-      console.log(`[Middleware] NON-ADMIN REDIRECT TO: ${url.href}`);
+      console.log(`[Middleware] NON-ADMIN ACCESS DENIED: ${user.email} (Role: ${role})`);
       if (url.hostname.includes('vercel.app')) {
         return NextResponse.redirect(new URL('/', 'http://localhost:3000'));
       }

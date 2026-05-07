@@ -50,14 +50,22 @@ export async function getAdminSettingsAction() {
       cost_generate: 10,
       cost_rewrite: 3,
       cost_similar: 5,
+      cost_script: 7,
+      bonus_welcome: 30,
+      bonus_event: 0,
     };
     await supabase.from('admin_settings').insert(defaults);
     return defaults;
   }
+  // Check for missing columns
+  const expectedColumns = ['cost_script', 'bonus_welcome', 'bonus_event'];
+  const missingColumns = expectedColumns.filter(col => !(col in data));
+
   // Merge: DB에 schema_fields 없으면 기본값 주입
   return {
     ...data,
     schema_fields: data.schema_fields ?? DEFAULT_SCHEMA_FIELDS,
+    missingColumns: missingColumns.length > 0 ? missingColumns : null
   };
 }
 
@@ -156,6 +164,12 @@ export async function resetPromptsToDefaultAction() {
     prompt_episode_outline: '각 회차별 아웃라인을 작성하십시오.',
     prompt_episode_script: DEFAULT_SCRIPT_PROMPT,
     prompt_scenario_rewrite: DEFAULT_REWRITE_PROMPT,
+    cost_generate: 10,
+    cost_rewrite: 3,
+    cost_similar: 5,
+    cost_script: 7,
+    bonus_welcome: 30,
+    bonus_event: 0,
   };
   return await updateAdminSettingsAction(defaults);
 }
@@ -212,7 +226,11 @@ export async function fetchUserListAction(page: number = 1, search?: string) {
 
   let query = supabase
     .from('users')
-    .select('id, email, full_name, plan, role, credits, created_at, status', { count: 'exact' });
+    .select(`
+      id, email, full_name, plan, role, credits, created_at,
+      projects:projects_v2(count),
+      payments:credit_transactions(amount, stripe_event_id)
+    `, { count: 'exact' });
 
   if (search) {
     query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
@@ -222,7 +240,22 @@ export async function fetchUserListAction(page: number = 1, search?: string) {
     .order('created_at', { ascending: false })
     .range(from, to);
 
-  return { users: data || [], totalCount: count || 0, error };
+  // Post-process to calculate totals
+  const processedUsers = data?.map((user: any) => {
+    const projectCount = user.projects?.[0]?.count || 0;
+    // Estimate payments: Sum of positive amounts with stripe_event_id
+    const totalPayments = user.payments
+      ?.filter((p: any) => p.amount > 0 && p.stripe_event_id)
+      .reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
+
+    return {
+      ...user,
+      projectCount,
+      totalPayments
+    };
+  });
+
+  return { users: processedUsers || [], totalCount: count || 0, error };
 }
 
 export async function toggleUserStatusAction(userId: string, currentStatus: string) {
@@ -237,7 +270,7 @@ export async function toggleUserStatusAction(userId: string, currentStatus: stri
   return { success: !error, error };
 }
 
-export async function manualCreditGrantAction(email: string, amount: number, memo: string) {
+export async function manualCreditGrantAction(email: string, amount: number, memo: string, expiresAt?: string) {
   const supabase = createAdminClient();
   
   // 1. 유저 조회
@@ -250,15 +283,18 @@ export async function manualCreditGrantAction(email: string, amount: number, mem
   if (!user) return { success: false, error: 'User not found' };
 
   // 2. RPC 호출 (충전)
+  // v10.5: expires_at 필드 추가 지원
   const { error } = await supabase.rpc('grant_user_credits', {
     p_user_id: user.id,
     p_amount: amount,
     p_reason: 'manual_grant',
-    p_memo: memo // SQL 함수에 메모 필드 추가 필요 시 반영
+    p_memo: memo,
+    p_expires_at: expiresAt || null
   });
 
+  revalidatePath('/admin/users');
   revalidatePath('/admin/credits');
-  return { success: !error, error };
+  return { success: !error, error: error?.message };
 }
 
 export async function fetchLoginLogsAction() {

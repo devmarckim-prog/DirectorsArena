@@ -13,23 +13,17 @@ export default async function AdminLayout({
   
   if (!user) redirect("/login");
 
-  const supabase = createAdminClient();
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+  // v10.0: Use app_metadata for secure role checking
+  const role = user.app_metadata?.role;
+  const isMasterAdmin = role === 'admin';
 
-  const isMasterDev = user.email === 'dev.marckim@gmail.com';
-
-  if (!isMasterDev && profile?.role !== 'admin') {
+  if (!isMasterAdmin) {
     redirect("/"); // Not an admin
   }
 
   const menuItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Users", href: "/admin/users", icon: Users },
-    { name: "Credits", href: "/admin/credits", icon: CreditCard },
     { name: "System Settings", href: "/admin/settings", icon: ShieldCheck },
     { name: "Security Logs", href: "/admin/logs", icon: Activity },
   ];

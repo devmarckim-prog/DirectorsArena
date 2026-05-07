@@ -14,6 +14,7 @@ export function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const isProjectPage = pathname?.includes('/project-contents/');
   const isLandingPage = pathname === '/';
+  const isAdminPage = pathname?.startsWith('/admin');
 
   useEffect(() => {
     const checkUser = async () => {
@@ -29,7 +30,7 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (isLandingPage) return null;
+  if (isLandingPage || isAdminPage) return null;
 
   const isAdmin = userEmail === 'dev.marckim@gmail.com';
 

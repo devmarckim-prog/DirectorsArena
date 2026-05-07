@@ -10,14 +10,14 @@ import { SchemaFieldDesigner } from "@/components/admin/schema-field-designer";
 import { 
   Settings, Save, RotateCcw, 
   Terminal, Database, Sparkles,
-  Loader2
+  Loader2, Coins
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'prompts' | 'schema'>('prompts');
+  const [activeTab, setActiveTab] = useState<'prompts' | 'schema' | 'credits'>('prompts');
 
   useEffect(() => {
     loadSettings();
@@ -106,7 +106,41 @@ export default function AdminSettingsPage() {
         >
           Input Schema Design
         </button>
+        <button 
+          onClick={() => setActiveTab('credits')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            activeTab === 'credits' ? "bg-brand-gold text-black shadow-lg" : "text-neutral-500 hover:text-white"
+          )}
+        >
+          Credit Policy
+        </button>
       </div>
+
+      {settings?.missingColumns && (
+        <section className="mb-8 bg-amber-500/10 border border-amber-500/20 rounded-[32px] p-8">
+          <div className="flex items-start gap-6">
+            <div className="p-3 rounded-2xl bg-amber-500 text-black">
+              <Terminal size={24} />
+            </div>
+            <div className="flex-1 space-y-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-amber-500">DB Schema Migration Required</h3>
+              <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                The following policy fields are missing in your database: <span className="text-white font-bold">{settings.missingColumns.join(', ')}</span>. 
+                Please run the following SQL in your Supabase Dashboard to enable saving these settings.
+              </p>
+              <div className="bg-black/40 rounded-2xl p-6 font-mono text-[10px] text-neutral-300 relative group">
+                <pre className="overflow-x-auto">
+{`ALTER TABLE public.admin_settings 
+ADD COLUMN IF NOT EXISTS cost_script INTEGER DEFAULT 7,
+ADD COLUMN IF NOT EXISTS bonus_welcome INTEGER DEFAULT 30,
+ADD COLUMN IF NOT EXISTS bonus_event INTEGER DEFAULT 0;`}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-8">
         {activeTab === 'prompts' ? (
@@ -168,6 +202,70 @@ export default function AdminSettingsPage() {
               </div>
             </section>
           </div>
+        ) : activeTab === 'credits' ? (
+          <section className="bg-white/[0.02] border border-white/5 rounded-[40px] p-10">
+            <div className="flex items-center space-x-4 mb-8">
+              <div className="p-3 rounded-2xl bg-green-500/10 text-green-400">
+                <Coins size={24} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-white">Monetization & Economics</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { key: 'cost_generate', label: 'Story Ignition (Init)', color: 'text-brand-gold' },
+                { key: 'cost_script', label: 'Episode Scripting', color: 'text-blue-400' },
+                { key: 'cost_rewrite', label: 'Scene Rewriting', color: 'text-purple-400' },
+                { key: 'cost_similar', label: 'Cinematic Benchmark', color: 'text-emerald-400' },
+              ].map((c) => (
+                <div key={c.key} className="bg-white/[0.03] border border-white/5 rounded-3xl p-8 group hover:bg-white/[0.05] transition-all">
+                  <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-4">{c.label}</p>
+                  <div className="flex items-end gap-2">
+                    <input 
+                      type="number"
+                      value={settings[c.key]}
+                      onChange={(e) => setSettings({...settings, [c.key]: parseInt(e.target.value) || 0})}
+                      className={cn(
+                        "bg-transparent border-b border-white/10 text-3xl font-black outline-none w-20 focus:border-brand-gold transition-all",
+                        c.color
+                      )}
+                    />
+                    <span className="text-xs font-bold text-neutral-600 mb-2 uppercase">Credits</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 flex items-center space-x-4 mb-8">
+              <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
+                <Sparkles size={24} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-white">Reward & Acquisition Policy</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                { key: 'bonus_welcome', label: 'Welcome Bonus (On Sign-up)', color: 'text-amber-400' },
+                { key: 'bonus_event', label: 'Global Event Bonus', color: 'text-pink-400' },
+              ].map((c) => (
+                <div key={c.key} className="bg-white/[0.03] border border-white/5 rounded-3xl p-8 group hover:bg-white/[0.05] transition-all">
+                  <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-4">{c.label}</p>
+                  <div className="flex items-end gap-2">
+                    <input 
+                      type="number"
+                      value={settings[c.key]}
+                      onChange={(e) => setSettings({...settings, [c.key]: parseInt(e.target.value) || 0})}
+                      className={cn(
+                        "bg-transparent border-b border-white/10 text-3xl font-black outline-none w-24 focus:border-brand-gold transition-all",
+                        c.color
+                      )}
+                    />
+                    <span className="text-xs font-bold text-neutral-600 mb-2 uppercase">Credits</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         ) : (
           <section className="bg-white/[0.02] border border-white/5 rounded-[40px] p-10">
             <div className="flex items-center space-x-4 mb-8">

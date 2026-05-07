@@ -77,19 +77,36 @@ export function UserMenu() {
     });
 
     // 3. Real-time Profile Listener (Credits/Plan)
-    const profileChannel = supabase
-      .channel('public:users_profile')
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'users',
-        filter: `id=eq.${user?.id}`
-      }, (payload) => {
-        if (payload.new) {
-          setUser(prev => prev ? { ...prev, ...payload.new } : null);
-        }
-      })
-      .subscribe();
+    if (user?.id) {
+      const profileChannel = supabase
+        .channel(`user-profile-${user.id}`)
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'users',
+          filter: `id=eq.${user.id}`
+        }, (payload) => {
+          if (payload.new) {
+            setUser(prev => {
+              if (!prev) return null;
+              // Only update if data actually changed to avoid unnecessary re-renders
+              return { 
+                ...prev, 
+                credits: payload.new.credits ?? prev.credits,
+                plan: payload.new.plan ?? prev.plan,
+                role: payload.new.role ?? prev.role
+              };
+            });
+          }
+        })
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+        supabase.removeChannel(profileChannel);
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
 
     // 4. Click Outside Listener
     const handleClickOutside = (e: MouseEvent) => {

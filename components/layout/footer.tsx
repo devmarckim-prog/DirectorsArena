@@ -1,8 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 export function Footer() {
+  const pathname = usePathname();
+  const isAdminPage = pathname?.startsWith('/admin');
+
+  if (isAdminPage) return null;
+
   return (
     <footer className="fixed bottom-0 left-0 right-0 h-20 px-10 flex items-center justify-between z-50 pointer-events-none">
       <div className="flex items-center space-x-10 pointer-events-auto">

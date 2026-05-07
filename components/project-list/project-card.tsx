@@ -91,6 +91,7 @@ export interface Project {
   is_sample?: boolean;
   image?: string;
   synopsis?: string;
+  created_at?: string;
 }
 
 export function ProjectCard({ 
@@ -348,10 +349,25 @@ export function ProjectCard({
                         </div>
                         <ArrowUpRight size={14} className="absolute top-0 right-0 text-white/20 group-hover:text-brand-gold transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
                      </div>
-                      <div className="flex items-center space-x-2 text-[9px] text-neutral-500 font-medium">
+                      <div className="flex items-center justify-between w-full text-[9px] text-neutral-500 font-medium">
                         <span className="opacity-40 tracking-tighter uppercase">
                           {project.is_sample ? "MOCK PREVIEW" : "READY TO SYNC"}
                         </span>
+                        {project.created_at && (() => {
+                          const createdDate = new Date(project.created_at);
+                          const isRecent = new Date().getTime() - createdDate.getTime() < 24 * 60 * 60 * 1000;
+                          return (
+                            <span className={cn(
+                              "opacity-20 tabular-nums",
+                              isRecent && "opacity-40 text-brand-gold"
+                            )}>
+                              {isRecent 
+                                ? `${createdDate.getHours().toString().padStart(2, '0')}:${createdDate.getMinutes().toString().padStart(2, '0')}`
+                                : createdDate.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                              }
+                            </span>
+                          );
+                        })()}
                       </div>
                    </div>
                    <div className="w-full space-y-4">
