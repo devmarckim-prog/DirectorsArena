@@ -77,8 +77,9 @@ export function UserMenu() {
     });
 
     // 3. Real-time Profile Listener (Credits/Plan)
+    let profileChannel: any = null;
     if (user?.id) {
-      const profileChannel = supabase
+      profileChannel = supabase
         .channel(`user-profile-${user.id}`)
         .on('postgres_changes', { 
           event: 'UPDATE', 
@@ -89,7 +90,6 @@ export function UserMenu() {
           if (payload.new) {
             setUser(prev => {
               if (!prev) return null;
-              // Only update if data actually changed to avoid unnecessary re-renders
               return { 
                 ...prev, 
                 credits: payload.new.credits ?? prev.credits,
@@ -100,12 +100,6 @@ export function UserMenu() {
           }
         })
         .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-        supabase.removeChannel(profileChannel);
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
     }
 
     // 4. Click Outside Listener
@@ -118,7 +112,7 @@ export function UserMenu() {
 
     return () => {
       subscription.unsubscribe();
-      supabase.removeChannel(profileChannel);
+      if (profileChannel) supabase.removeChannel(profileChannel);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [user?.id]);
