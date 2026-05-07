@@ -62,15 +62,13 @@ export function Header() {
             {/* Version Badge */}
             <div className="flex items-center gap-2 group transition-all">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(197,160,89,1)]" />
-              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v3.11.0</span>
+              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v10.0.0</span>
             </div>
 
-            {/* Admin Toggle - Only for specific dev account */}
-            {isAdmin && (
-              <Link href="/admin" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-neutral-500 hover:text-brand-gold hover:border-brand-gold/50 transition-all group">
-                 <Database size={18} className="group-hover:rotate-12 transition-transform" />
-              </Link>
-            )}
+            {/* Admin Toggle - Only for users with admin role */}
+            <Link href="/admin" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-neutral-500 hover:text-brand-gold hover:border-brand-gold/50 transition-all group">
+               <Database size={18} className="group-hover:rotate-12 transition-transform" />
+            </Link>
 
             {/* Premium User Menu with Credits & Logout */}
             <UserMenu />
