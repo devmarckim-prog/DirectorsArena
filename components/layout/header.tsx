@@ -62,7 +62,7 @@ export function Header() {
             {/* Version Badge */}
             <div className="flex items-center gap-2 group transition-all">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(197,160,89,1)]" />
-              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v99.9.9</span>
+              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v10.1.0</span>
             </div>
 
             {/* Admin Toggle - Only for users with admin role */}

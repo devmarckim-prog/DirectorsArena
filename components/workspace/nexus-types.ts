@@ -27,6 +27,7 @@ export interface NexusCharacter {
   importance: number;
   color: string;
   ageGroup?: string;  // ✅ 타임라인 구분용
+  relations?: RelationItem[]; // ✅ 관계 정보 추가
 }
 
 export interface NexusRelationship {

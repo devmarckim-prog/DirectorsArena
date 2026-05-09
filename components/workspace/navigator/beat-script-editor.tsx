@@ -16,7 +16,7 @@ interface BeatScriptEditorProps {
   setInstruction: (val: string) => void;
   onSubmitSteer: () => void;
   handleSteerBlock: (block: any) => void;
-  bottomRef: React.RefObject<HTMLDivElement>;
+  bottomRef: React.RefObject<HTMLDivElement | null>;
   // v11.31: Scene Navigation
   sceneList?: any[];
   onNavigateScene?: (beat: any) => void;

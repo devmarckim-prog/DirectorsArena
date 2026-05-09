@@ -7,7 +7,7 @@ export function useAutoSave<T>(
   delay: number = 3000
 ) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const initialMount = useRef(true);
 
   // Load from local storage initially

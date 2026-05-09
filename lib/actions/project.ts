@@ -301,6 +301,7 @@ export async function updateCharacterAction(id: string, updates: any, projectId?
     const supabase = createAdminClient();
     
     console.log(`[updateCharacterAction] Updating character ${id} with:`, updates);
+    const characterName = updates.name || "";
 
     // Standardize: If exact age is provided, remove categorical age groups to avoid shadowing
     if (updates.age && updates.age > 0) {

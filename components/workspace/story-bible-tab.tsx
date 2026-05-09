@@ -53,7 +53,7 @@ export function StoryBibleTab({
     });
     
     // 2. Second pass: Merge meta characters (to preserve original names as aliases and fill gaps)
-    metaChars.forEach(c => {
+    metaChars.forEach((c: any) => {
       const charId = c.id || c.name;
       const match = Array.from(charMap.values()).find(existing => 
         existing.id === charId || existing.name === c.name
@@ -88,7 +88,7 @@ export function StoryBibleTab({
       }
     });
     
-    return Array.from(charMap.values()).map(c => {
+    return Array.from(charMap.values()).map((c: any) => {
       const aliasesArray = Array.from(c.aliases || [c.name]);
       const allAliases = new Set<string>();
       

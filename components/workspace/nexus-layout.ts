@@ -18,6 +18,8 @@ export interface ConnectionPath {
   color: string;
   opacity: number;
   dashArray?: string;
+  type?: string;
+  description?: string;
 }
 
 export interface DynamicZone {
@@ -131,10 +133,10 @@ export class AntigravityLayoutEngine {
       if (!char.id) char.id = char.name || `char-${i}`;
       
       // ✅ 데이터 보강: 진영이 없으면 강제로 할당
-      if (!char.group && !char.faction) {
-        if (char.id === protagonist?.id) char.group = "PROTAGONIST";
-        else if (i === 1) char.group = "ANTAGONIST";
-        else char.group = "NEUTRAL";
+      if (!char.faction) {
+        if (char.id === protagonist?.id) char.faction = "PROTAGONIST";
+        else if (i === 1) char.faction = "ANTAGONIST";
+        else char.faction = "NEUTRAL";
       }
 
       // ✅ 데이터 보강: 관계가 전혀 없으면 주인공과 강제 연결
@@ -142,7 +144,7 @@ export class AntigravityLayoutEngine {
         if (char.id !== protagonist?.id && protagonist) {
           char.relations = [{
             target: protagonist.name,
-            type: "ALLY",
+            type: "ally",
             strength: 5,
             description: "Automatically linked for story continuity"
           }];
@@ -311,7 +313,34 @@ export class AntigravityLayoutEngine {
         dashArray: style.dashArray,
         type: rel.type,  // ✅ 타입 정보 포함
         description: rel.description  // ✅ 설명 포함
-      } as any; // Type override since ConnectionPath might need extending, but we'll cast to any for now or just add it to type definition. Wait, ConnectionPath in nexus-layout.ts already has dashArray? Let's check. Yes, it has dashArray but might not have type/description.
+      } as any;
     }).filter(Boolean) as ConnectionPath[];
+  }
+
+  // ✅ 진영 영역 경로 생성 (v11.33)
+  getFactionZonePath(position: 'left' | 'right' | 'top' | 'bottom'): string {
+    const ZONE_CONFIG = {
+      left: { cx: 220, cy: 400, w: 350, h: 600 },
+      right: { cx: 980, cy: 400, w: 350, h: 600 },
+      top: { cx: 600, cy: 140, w: 650, h: 200 },
+      bottom: { cx: 600, cy: 690, w: 650, h: 160 },
+    };
+
+    const z = ZONE_CONFIG[position];
+    const r = 40; // Corner radius
+    
+    // Rounded Rectangle Path
+    return `
+      M ${z.cx - z.w/2 + r},${z.cy - z.h/2}
+      H ${z.cx + z.w/2 - r}
+      Q ${z.cx + z.w/2},${z.cy - z.h/2} ${z.cx + z.w/2},${z.cy - z.h/2 + r}
+      V ${z.cy + z.h/2 - r}
+      Q ${z.cx + z.w/2},${z.cy + z.h/2} ${z.cx + z.w/2 - r},${z.cy + z.h/2}
+      H ${z.cx - z.w/2 + r}
+      Q ${z.cx - z.w/2},${z.cy + z.h/2} ${z.cx - z.w/2},${z.cy + z.h/2 - r}
+      V ${z.cy - z.h/2 + r}
+      Q ${z.cx - z.w/2},${z.cy - z.h/2} ${z.cx - z.w/2 + r},${z.cy - z.h/2}
+      Z
+    `.replace(/\s+/g, ' ').trim();
   }
 }

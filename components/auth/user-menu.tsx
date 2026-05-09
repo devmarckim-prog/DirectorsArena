@@ -192,7 +192,7 @@ export function UserMenu() {
                 </div>
               </button>
 
-              {user.email === 'dev.marckim@gmail.com' && (
+              {user.role === 'admin' && (
                 <button 
                   onClick={() => {
                     setIsOpen(false);
