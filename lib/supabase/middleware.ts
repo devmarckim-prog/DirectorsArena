@@ -45,9 +45,6 @@ export async function updateSession(request: NextRequest) {
     url.pathname = '/login'
     console.log(`[Middleware] REDIRECTING GUEST TO: ${url.href}`);
     // 방어 코드: 로컬 개발 중인데 배포 주소가 섞여 있다면 교정
-    if (url.hostname.includes('vercel.app')) {
-      return NextResponse.redirect(new URL('/login', 'http://localhost:3000'));
-    }
     return NextResponse.redirect(url)
   }
 
@@ -60,9 +57,6 @@ export async function updateSession(request: NextRequest) {
     if (!isMasterAdmin) {
       url.pathname = '/'
       console.log(`[Middleware] NON-ADMIN ACCESS DENIED: ${user.email} (Role: ${role})`);
-      if (url.hostname.includes('vercel.app')) {
-        return NextResponse.redirect(new URL('/', 'http://localhost:3000'));
-      }
       return NextResponse.redirect(url)
     }
   }
@@ -71,9 +65,6 @@ export async function updateSession(request: NextRequest) {
   if (user && (url.pathname === '/login' || url.pathname === '/signup')) {
     url.pathname = '/'
     console.log(`[Middleware] AUTHED USER AT LOGIN PAGE, REDIRECTING TO: ${url.href}`);
-    if (url.hostname.includes('vercel.app')) {
-      return NextResponse.redirect(new URL('/', 'http://localhost:3000'));
-    }
     return NextResponse.redirect(url)
   }
 
