@@ -91,10 +91,8 @@ export default function LoginPage() {
                 const { data: { session } } = await supabase.auth.getSession();
                 
                 if (session) {
-                  const targetUrl = `http://localhost:3000/project-list`;
+                  const targetUrl = `/project-list`;
                   console.log("SUCCESS: Session established.");
-                  console.log("REDIRECTING TO:", targetUrl);
-                  alert(`로그인 성공! 다음 주소로 이동합니다: ${targetUrl}`);
                   window.location.replace(targetUrl);
                 } else {
                   throw new Error("세션 생성에 실패했습니다. 쿠키 설정을 확인해 주세요.");
