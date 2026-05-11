@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase/client";
 
 export function Header() {
   const pathname = usePathname();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const isProjectPage = pathname?.includes('/project-contents/');
   const isLandingPage = pathname === '/';
   const isAdminPage = pathname?.startsWith('/admin');
@@ -19,20 +19,18 @@ export function Header() {
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUserEmail(session?.user?.email ?? null);
+      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
     };
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null);
+      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   if (isLandingPage || isAdminPage) return null;
-
-  const isAdmin = userEmail === 'dev.marckim@gmail.com';
 
   return (
     <header className={cn(
@@ -66,9 +64,11 @@ export function Header() {
             </div>
 
             {/* Admin Toggle - Only for users with admin role */}
-            <Link href="/admin" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-neutral-500 hover:text-brand-gold hover:border-brand-gold/50 transition-all group">
-               <Database size={18} className="group-hover:rotate-12 transition-transform" />
-            </Link>
+            {isAdmin && (
+              <Link href="/admin" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-neutral-500 hover:text-brand-gold hover:border-brand-gold/50 transition-all group">
+                <Database size={18} className="group-hover:rotate-12 transition-transform" />
+              </Link>
+            )}
 
             {/* Premium User Menu with Credits & Logout */}
             <UserMenu />
