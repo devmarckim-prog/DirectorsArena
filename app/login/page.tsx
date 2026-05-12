@@ -10,10 +10,13 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    console.log("Initiating Google Login. Redirecting back to:", redirectTo);
+    
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
         queryParams: {
           prompt: 'select_account',
           access_type: 'offline',
