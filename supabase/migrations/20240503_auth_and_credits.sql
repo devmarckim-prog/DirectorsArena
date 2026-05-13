@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS story_beats_v2 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID REFERENCES projects_v2(id) ON DELETE CASCADE,
-    act_number INTEGER NOT NULL,
+    act_number INTEGER NOT NUL
     beat_type TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
