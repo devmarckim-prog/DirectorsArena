@@ -10,12 +10,10 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-    const redirectTo = isLocal 
-      ? `${window.location.origin}/auth/callback`
-      : `https://directors-arena-next.vercel.app/auth/callback`;
+    // v10.1.7: Completely hardcoded to production to eliminate variables
+    const redirectTo = `https://directors-arena-next.vercel.app/auth/callback`;
       
-    console.log("Initiating Google Login. Redirecting to:", redirectTo);
+    console.log("Initiating Google Login. FINAL FORCED REDIRECT:", redirectTo);
     
     await supabase.auth.signInWithOAuth({
       provider: 'google',
