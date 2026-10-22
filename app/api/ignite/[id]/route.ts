@@ -1,6 +1,6 @@
 // OMA Zero-Defect Raw Protocol Engine (v6.3)
 // Compliance: Claude API Guide (VIBE Dedicated)
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { getResolvedModelId } from '@/lib/ai/models';
@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import { persistProjectGeneration } from '@/lib/repository/generation';
 import { ProjectGenerationSchema } from '@/lib/schemas/generation';
 import { safeJSONParse } from '@/lib/utils/ai-parser';
+import { POC_TEST_ADMIN_USER, getPocDummyGeneration, getPocProjectById, savePocProject } from '@/lib/poc';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,6 +37,82 @@ export async function POST(
       required: 10,
       code: 'INSUFFICIENT_CREDITS' 
     }), { status: 402 });
+  }
+
+    // POC Admin Mode Intercept: Generate with dummy data without calling Anthropic API
+  const cookieHeader = request.headers.get('cookie') || '';
+  const isPoc = user.id === POC_TEST_ADMIN_USER.id || cookieHeader.includes('da_poc_admin=true');
+
+  if (isPoc) {
+    console.log(`--- [POC MODE] Intercepted Ignition for Project: ${projectId} (Using Dummy Data, No External API Call) ---`);
+    let project = getPocProjectById(projectId);
+    if (!project) {
+      try {
+        const { data } = await supabase.from('projects_v2').select('*').eq('id', projectId).single();
+        project = data;
+      } catch (e) {}
+    }
+
+    const dummyData = getPocDummyGeneration(project);
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          controller.enqueue(encoder.encode(`0:${JSON.stringify("[POC 모드] AI 스토리 엔진 가동 (더미 데이터 생성 중)...\n")}\n`));
+          await new Promise(r => setTimeout(r, 400));
+
+          controller.enqueue(encoder.encode(`0:${JSON.stringify("시네마틱 세계관 및 4대 핵심 인물 관계도 구축 완료...\n")}\n`));
+          await new Promise(r => setTimeout(r, 500));
+
+          controller.enqueue(encoder.encode(`0:${JSON.stringify("3막 시나리오 구조화 및 씬별 지문 생성 중...\n")}\n`));
+          await new Promise(r => setTimeout(r, 500));
+
+          controller.enqueue(encoder.encode(`0:${JSON.stringify("제1화 전체 대본 집필 완료 및 에피소드 저장 중...\n")}\n`));
+          await new Promise(r => setTimeout(r, 400));
+
+          // Save dummy project
+          const completedProject = {
+            ...(project || {}),
+            id: projectId,
+            title: dummyData.title,
+            subtitle: dummyData.englishTitle,
+            logline: dummyData.logline,
+            synopsis: typeof dummyData.synopsis === 'string' ? dummyData.synopsis : JSON.stringify(dummyData.synopsis),
+            status: 'READY',
+            progress: 100,
+            generated_content: {
+              epicNarrative: dummyData.story?.epicNarrative,
+              generatedAt: new Date().toISOString(),
+              wordCount: 850
+            },
+            characters: dummyData.characters,
+            structure: dummyData.structure,
+            episodes: dummyData.episodes
+          };
+
+          savePocProject(completedProject);
+
+          try {
+            await persistProjectGeneration(projectId, dummyData);
+          } catch (dbErr) {
+            console.warn('[POC] Supabase persistence skipped or failed, saved locally in POC store.');
+          }
+
+          // Complete signal
+          controller.enqueue(encoder.encode(`0:${JSON.stringify({ phase: 3, status: 'COMPLETE', progress: 100 })}\n`));
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Content-Type-Options': 'nosniff'
+      }
+    });
   }
 
   console.log(`--- [OMA] IGNITION PULSE START: ${projectId} (User: ${user.email}) ---`);

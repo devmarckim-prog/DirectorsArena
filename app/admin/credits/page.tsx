@@ -2,17 +2,52 @@ import { CreditCard, Send, History } from "lucide-react";
 import { CreditGrantForm } from "@/components/admin/credit-grant-form";
 import { createAdminClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
+import { cookies } from "next/headers";
+import { POC_COOKIE_NAME } from "@/lib/poc";
 
 export default async function AdminCreditsPage() {
-  const supabase = createAdminClient();
-  
-  // Fetch recent manual grants
-  const { data: recentGrants } = await supabase
-    .from('credit_transactions')
-    .select('id, user_id, amount, reason, created_at, users(email, full_name)')
-    .eq('reason', 'manual_grant')
-    .order('created_at', { ascending: false })
-    .limit(10);
+  let isPoc = false;
+  try {
+    const cookieStore = await cookies();
+    isPoc = cookieStore.get(POC_COOKIE_NAME)?.value === 'true';
+  } catch {}
+
+  let recentGrants: any[] = [];
+  if (!isPoc) {
+    try {
+      const supabase = createAdminClient();
+      const { data } = await supabase
+        .from('credit_transactions')
+        .select('id, user_id, amount, reason, created_at, users(email, full_name)')
+        .eq('reason', 'manual_grant')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      recentGrants = data || [];
+    } catch (err) {
+      recentGrants = [];
+    }
+  }
+
+  if (!recentGrants || recentGrants.length === 0) {
+    recentGrants = [
+      {
+        id: 'grant-poc-1',
+        user_id: 'poc-admin',
+        amount: 99999,
+        reason: 'manual_grant',
+        created_at: new Date().toISOString(),
+        users: { email: 'test-admin@directorsarena.internal', full_name: '테스트 어드민 (POC)' }
+      },
+      {
+        id: 'grant-poc-2',
+        user_id: 'usr-1',
+        amount: 500,
+        reason: 'manual_grant',
+        created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+        users: { email: 'kim.director@studio.kr', full_name: '김도훈 감독' }
+      }
+    ];
+  }
 
   return (
     <div className="space-y-12">

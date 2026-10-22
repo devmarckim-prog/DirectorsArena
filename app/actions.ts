@@ -6,6 +6,9 @@ import * as projectActions from "@/lib/actions/project";
 import * as authActions from "@/lib/actions/auth";
 
 // Auth Actions
+export async function pocLoginAction() {
+  return authActions.pocLoginAction();
+}
 export async function loginAction(formData: FormData) {
   return authActions.loginAction(formData);
 }
@@ -20,6 +23,9 @@ export async function getUserSettingsAction() {
 }
 export async function updateUserSettingsAction(settings: any) {
   return authActions.updateUserSettingsAction(settings);
+}
+export async function getCurrentUserAction() {
+  return authActions.getCurrentUserAction();
 }
 
 // Admin Actions

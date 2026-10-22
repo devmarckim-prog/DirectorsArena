@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 export function Footer() {
   const pathname = usePathname();
   const isAdminPage = pathname?.startsWith('/admin');
+  const isWizardPage = pathname === '/project-wizard';
 
-  if (isAdminPage) return null;
+  if (isAdminPage || isWizardPage) return null;
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 h-20 px-10 flex items-center justify-between z-50 pointer-events-none">
@@ -22,7 +23,6 @@ export function Footer() {
           </span>
         </div>
       </div>
-
     </footer>
   );
 }

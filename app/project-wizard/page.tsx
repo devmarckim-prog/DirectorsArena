@@ -85,11 +85,11 @@ export default function CreateProjectPage() {
   }, [formData, router]);
 
   return (
-    <div className="min-h-screen text-neutral-100 font-sans overflow-x-hidden relative selection:bg-brand-gold/30 selection:text-white pt-12">
-      <main className="relative pt-4 pb-8 max-w-7xl mx-auto px-6 flex-1 flex flex-col">
-        <div className="flex-1 flex flex-col pt-10">
+    <div className="min-h-screen text-neutral-100 font-sans overflow-x-hidden relative selection:bg-brand-gold/30 selection:text-white pt-4">
+      <main className="relative pt-2 pb-44 max-w-7xl mx-auto px-6 flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col pt-4">
           {/* v11.0: New High-Fidelity Step Indicator positioned above the Title */}
-          <div className="w-full mb-10">
+          <div className="w-full mb-5">
             <div className="flex items-center space-x-12">
               {[1, 2, 3, 4].map((step) => (
                 <button 
@@ -133,7 +133,7 @@ export default function CreateProjectPage() {
         </div>
 
         {/* v11.0: Fixed Bottom Navigation Bar for consistent 'Void' control */}
-        <div className="fixed bottom-[73px] left-1/2 -translate-x-1/2 flex items-center space-x-6 z-[100] bg-neutral-950/60 backdrop-blur-3xl px-10 py-5 rounded-full border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-6 z-[100] bg-neutral-950/80 backdrop-blur-2xl px-8 py-3 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.7)]">
            {currentStep > 1 && (
              <button onClick={prevStep} className="text-neutral-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest px-4">
                Back

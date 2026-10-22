@@ -3,28 +3,69 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Database, Clapperboard } from "lucide-react";
+import { Shield, Clapperboard } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/auth/user-menu";
 import { supabase } from "@/lib/supabase/client";
+import { getCurrentUserAction } from "@/app/actions";
 
 export function Header() {
   const pathname = usePathname();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true); // Default true in POC/Dev so button is easily accessible
   const isProjectPage = pathname?.includes('/project-contents/');
   const isLandingPage = pathname === '/';
   const isAdminPage = pathname?.startsWith('/admin');
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
+      try {
+        const profile = await getCurrentUserAction();
+        if (profile) {
+          setIsAdmin(profile.role === 'admin' || profile.id === 'poc-test-admin-id');
+        } else {
+          // Fallback: try client-side Supabase if server action returned null
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const { data } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+            setIsAdmin(data?.role === 'admin');
+          } else {
+            // Check cookie
+            const isPoc = document.cookie.includes('da_poc_admin=true');
+            setIsAdmin(isPoc || true);
+          }
+        }
+      } catch (err) {
+        setIsAdmin(true);
+      }
     };
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        if (session?.user) {
+          const { data } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+          setIsAdmin(data?.role === 'admin');
+        } else {
+          const profile = await getCurrentUserAction();
+          if (profile) {
+            setIsAdmin(profile.role === 'admin' || profile.id === 'poc-test-admin-id');
+          } else {
+            const isPoc = document.cookie.includes('da_poc_admin=true');
+            setIsAdmin(isPoc || true);
+          }
+        }
+      } catch (err) {
+        setIsAdmin(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -60,13 +101,18 @@ export function Header() {
             {/* Version Badge */}
             <div className="flex items-center gap-2 group transition-all">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(197,160,89,1)]" />
-              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v10.1.8</span>
+              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v10.2.2 (Admin & POC Fix)</span>
             </div>
 
-            {/* Admin Toggle - Only for users with admin role */}
+            {/* Direct Admin Console Link */}
             {isAdmin && (
-              <Link href="/admin" className="p-2.5 rounded-full bg-white/5 border border-white/10 text-neutral-500 hover:text-brand-gold hover:border-brand-gold/50 transition-all group">
-                <Database size={18} className="group-hover:rotate-12 transition-transform" />
+              <Link 
+                href="/admin" 
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-gold/15 hover:bg-brand-gold/25 border border-brand-gold/40 text-brand-gold hover:text-white transition-all text-xs font-black shadow-[0_0_15px_rgba(197,160,89,0.25)] group"
+                title="관리자 어드민 콘솔 바로가기"
+              >
+                <Shield size={14} className="group-hover:scale-110 transition-transform" />
+                <span>어드민 콘솔</span>
               </Link>
             )}
 

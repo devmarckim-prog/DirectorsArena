@@ -10,8 +10,11 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    // v10.1.7: Completely hardcoded to production to eliminate variables
-    const redirectTo = `https://directors-arena-next.vercel.app/auth/callback`;
+    // v10.1.7: Dynamically detect local dev environment while guaranteeing production Vercel fallback
+    const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    const redirectTo = isLocal
+      ? `${window.location.origin}/auth/callback`
+      : `https://directors-arena-next.vercel.app/auth/callback`;
       
     console.log("Initiating Google Login. FINAL FORCED REDIRECT:", redirectTo);
     
@@ -87,6 +90,22 @@ export default function LoginPage() {
             <span className="font-sans font-semibold text-[#1f1f1f]">Sign in with Google</span>
           </button>
 
+                    {/* POC Test Admin Instant Access */}
+          <button
+            onClick={async () => {
+              if (loading) return;
+              setLoading(true);
+              document.cookie = "da_poc_admin=true; path=/; max-age=604800";
+              const { pocLoginAction } = await import("@/lib/actions/auth");
+              await pocLoginAction();
+            }}
+            disabled={loading}
+            className="mt-4 w-full h-[52px] bg-gradient-to-r from-brand-gold/30 via-brand-gold to-brand-gold/30 hover:brightness-110 text-black font-black text-xs uppercase tracking-widest rounded-xl shadow-[0_0_25px_rgba(197,160,89,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Sparkles size={16} />
+            <span>POC 테스트 어드민 즉시 접속</span>
+          </button>
+
           {/* Dev Only: Admin Bypass Button */}
           <button
             onClick={async () => {
@@ -104,8 +123,8 @@ export default function LoginPage() {
 
                 if (error) throw error;
 
-                // 2. Double check session
-                const { data: { session } } = await supabase.auth.getSession();
+                // 2. Use session returned directly from login data
+                const session = data.session;
                 
                 if (session) {
                   const targetUrl = `/project-list`;

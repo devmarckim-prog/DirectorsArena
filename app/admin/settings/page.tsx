@@ -265,6 +265,40 @@ ADD COLUMN IF NOT EXISTS bonus_event INTEGER DEFAULT 0;`}
                 </div>
               ))}
             </div>
+
+            <div className="mt-12 flex items-center space-x-4 mb-8">
+              <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400">
+                <Database size={24} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-white">Global Display & Content Policy</h3>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-8 group hover:bg-white/[0.05] transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div>
+                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-1">Sample Projects Visibility</p>
+                <h4 className="text-sm font-bold text-white mb-2">대시보드 샘플 프로젝트 노출</h4>
+                <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                  활성화하면 모든 사용자 대시보드 프로젝트 슬레이트에 시스템 기본 엘리트 샘플 스토리 3개가 노출됩니다.
+                  비활성화하면 각 사용자가 직접 생성한 커스텀 프로젝트만 깔끔하게 노출됩니다.
+                </p>
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, show_samples: !settings.show_samples })}
+                className={cn(
+                  "relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none",
+                  settings.show_samples ? "bg-brand-gold" : "bg-neutral-800"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-7 w-7 transform rounded-full bg-black shadow-lg ring-0 transition duration-200 ease-in-out",
+                    settings.show_samples ? "translate-x-6" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
           </section>
         ) : (
           <section className="bg-white/[0.02] border border-white/5 rounded-[40px] p-10">

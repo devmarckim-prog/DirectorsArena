@@ -1,5 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { POC_COOKIE_NAME, POC_TEST_ADMIN_USER } from "@/lib/poc";
+
 import { createAdminClient } from "@/lib/supabase/server";
 import { generateObject } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
@@ -89,6 +92,43 @@ export async function generateEpisodeScriptAction(
   episodeId: string,
   episodeNumber: number
 ) {
+  try {
+    const cookieStore = await cookies();
+    const isPoc = cookieStore.get(POC_COOKIE_NAME)?.value === 'true';
+    if (isPoc) {
+      const dummyScript = `S# 1. 서울 도심 지하 벙커 / 밤 (INT. UNDERGROUND BUNKER - NIGHT)
+
+희미한 푸른색 비상등이 점멸하고 있다.
+강도진(38), 피 묻은 소매를 걷어 올린 채 메인 콘솔의 스위치를 올린다.
+모니터에 쏟아지는 암호화된 금융 거래 내역들.
+
+강도진: (낮은 목소리로) 서아린... 드디어 꼬리를 잡았군.
+
+그때, 등 뒤에서 총구를 겨누는 소리가 난다.
+도진이 천천히 뒤를 돌아보면, 어둠 속에서 모습을 드러내는 서아린(34).
+
+서아린:
+도진 씨. 여긴 당신이 들어올 수 있는 체스판이 아니에요.
+
+강도진:
+체스판은 네가 엎었지. 내가 끝내러 왔다.
+
+두 사람 사이에 팽팽한 살기가 감돈다.`;
+
+      const summary = `제${episodeNumber}화 대본 집필 완료: 신디케이트의 금융 코어 서버에 잠입한 강도진과 그를 기다리던 서아린의 극한 대치.`;
+      try {
+        const supabase = createAdminClient();
+        await supabase.from('episodes_v2').update({ script_content: dummyScript, summary }).eq('id', episodeId);
+      } catch (e) {}
+
+      return {
+        success: true,
+        scriptContent: dummyScript,
+        updatedSummary: summary
+      };
+    }
+  } catch (e) {}
+
   const { user, response: authResponse } = await authGuard();
   if (!user) return { success: false, error: "로그인이 필요합니다." };
 
@@ -205,6 +245,13 @@ export async function generateEpisodeScriptAction(
 }
 
 export async function triggerRegenerateAction(projectId: string, prompt: string = "") {
+  try {
+    const cookieStore = await cookies();
+    if (cookieStore.get(POC_COOKIE_NAME)?.value === 'true') {
+      return { success: true, message: "POC 모드 재생성 완료 (더미 반영)" };
+    }
+  } catch (e) {}
+
   try {
     const supabase = createAdminClient();
     

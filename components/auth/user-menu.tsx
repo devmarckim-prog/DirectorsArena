@@ -15,7 +15,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { logoutAction } from "@/app/actions";
+import { logoutAction, getCurrentUserAction } from "@/app/actions";
 import { cn } from "@/lib/utils";
 
 interface UserProfile {
@@ -35,25 +35,49 @@ export function UserMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 1. Initial Load
+    // 1. Initial Load (using Server Action first for maximum safety on Vercel)
     const initUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email!, session.user.user_metadata?.avatar_url);
+      try {
+        const profile = await getCurrentUserAction();
+        if (profile) {
+          setUser(profile as UserProfile);
+        } else {
+          // Fallback: try client-side Supabase if server action returned null
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const googleAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+            await fetchProfile(session.user.id, session.user.email!, googleAvatar);
+          }
+        }
+      } catch (err) {
+        console.error("Error in initUser:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     const fetchProfile = async (userId: string, email: string, avatarUrl?: string) => {
-      const { data } = await supabase
-        .from('users')
-        .select('id, email, role, credits, plan')
-        .eq('id', userId)
-        .single();
-      
-      if (data) {
-        setUser({ ...(data as UserProfile), avatar_url: avatarUrl });
-      } else {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, email, role, credits, plan, avatar_url')
+          .eq('id', userId)
+          .single();
+        
+        if (data && !error) {
+          setUser({ ...(data as UserProfile), avatar_url: (data as any).avatar_url || avatarUrl });
+        } else {
+          setUser({
+            id: userId,
+            email: email,
+            role: 'user',
+            credits: 0,
+            plan: 'free',
+            avatar_url: avatarUrl
+          });
+        }
+      } catch (err) {
+        console.error("Error in fetchProfile:", err);
         setUser({
           id: userId,
           email: email,
@@ -70,9 +94,15 @@ export function UserMenu() {
     // 2. Real-time Auth Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email!, session.user.user_metadata?.avatar_url);
+        const googleAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+        await fetchProfile(session.user.id, session.user.email!, googleAvatar);
       } else {
-        setUser(null);
+        const profile = await getCurrentUserAction();
+        if (profile) {
+          setUser(profile as UserProfile);
+        } else {
+          setUser(null);
+        }
       }
     });
 
@@ -135,7 +165,7 @@ export function UserMenu() {
           isOpen && "bg-white/10"
         )}
       >
-        <div className="flex flex-col items-end mr-1 hidden sm:flex">
+        <div className="flex flex-col items-end mr-1">
           <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] leading-none mb-1 group-hover:text-white/50 transition-colors">
             {user.plan === 'free' ? 'FREE ACCOUNT' : 'ELITE DIRECTOR'}
           </span>
@@ -192,18 +222,18 @@ export function UserMenu() {
                 </div>
               </button>
 
-              {user.role === 'admin' && (
+              {(user.role === 'admin' || user.id === 'poc-test-admin-id') && (
                 <button 
                   onClick={() => {
                     setIsOpen(false);
                     router.push('/admin');
                   }}
-                  className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl hover:bg-white/5 transition-all group text-left"
+                  className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl bg-brand-gold/10 hover:bg-brand-gold/20 transition-all group text-left border border-brand-gold/20"
                 >
-                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-brand-gold/20 transition-colors">
-                    <Shield size={14} className="text-neutral-500 group-hover:text-brand-gold transition-colors" />
+                  <div className="w-8 h-8 rounded-full bg-brand-gold/20 flex items-center justify-center border border-brand-gold/30 group-hover:bg-brand-gold/30 transition-colors">
+                    <Shield size={14} className="text-brand-gold transition-colors" />
                   </div>
-                  <span className="text-[11px] font-black text-neutral-400 group-hover:text-white uppercase tracking-widest transition-colors">Nexus Console</span>
+                  <span className="text-[11px] font-black text-brand-gold uppercase tracking-widest transition-colors">어드민 콘솔 (Nexus Admin)</span>
                 </button>
               )}
 
