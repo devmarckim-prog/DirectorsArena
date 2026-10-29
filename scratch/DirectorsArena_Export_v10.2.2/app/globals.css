@@ -1,0 +1,165 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #0f0f14;
+  --foreground: #e8e8ee;
+  --brand-gold: #C5A059;
+  
+  /* Readability Optimized Colors */
+  --text-primary: #e8e8ee;
+  --text-secondary: #b4b4c0;
+  --text-tertiary: #8a8a98;
+  
+  --bg-primary: #0f0f14;
+  --bg-secondary: #1a1a24;
+  --bg-tertiary: #252533;
+}
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-tertiary: var(--bg-tertiary);
+
+  --font-serif: "Nanum Myeongjo", "Old Standard TT", serif;
+  --font-sans: "Pretendard Variable", Pretendard, "Inter", ui-sans-serif, system-ui;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  
+  --color-brand-gold: #C5A059;
+  --color-brand-dark: #0A0A0A;
+}
+
+@keyframes draw {
+  0% { stroke-dashoffset: 200; stroke-dasharray: 200; }
+  50% { stroke-dashoffset: 0; stroke-dasharray: 200; }
+  100% { stroke-dashoffset: 200; stroke-dasharray: 200; }
+}
+
+@keyframes rotate-key {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+body {
+  /* Global Background - Radial Gradient with central illumination */
+  background: radial-gradient(circle at center, #1A1A1A 0%, #000000 100%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Film Grain Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Void Core Grid Lines */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -10;
+  background-image: 
+    linear-gradient(rgba(197, 160, 89, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(197, 160, 89, 0.05) 1px, transparent 1px);
+  background-size: 100px 100px;
+  mask-image: radial-gradient(circle at center, black, transparent 80%);
+}
+
+@layer utilities {
+  .font-cinematic-serif {
+    font-family: var(--font-serif);
+    text-transform: uppercase;
+    letter-spacing: -0.05em;
+    color: var(--brand-gold);
+  }
+  
+  .font-clean-sans {
+    font-family: var(--font-sans);
+    color: #D1D5DB;
+  }
+
+  .font-handwritten {
+    font-family: var(--font-nanum-pen), cursive;
+    color: var(--brand-gold);
+  }
+
+  .perspective-2000 {
+    perspective: 2000px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+  .scrollbar-hide, .no-scrollbar {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+  .scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .cinematic-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(197, 160, 89, 0.05), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  .custom-scrollbar-gold::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar-gold::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .custom-scrollbar-gold::-webkit-scrollbar-thumb {
+    background: rgba(197, 160, 89, 0.3);
+    border-radius: 10px;
+  }
+  .custom-scrollbar-gold::-webkit-scrollbar-thumb:hover {
+    background: rgba(197, 160, 89, 0.6);
+  }
+
+  .custom-scrollbar-slim::-webkit-scrollbar {
+    width: 2px;
+  }
+  .custom-scrollbar-slim::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .custom-scrollbar-slim::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .custom-scrollbar-slim::-webkit-scrollbar-thumb:hover {
+    background: #C5A059;
+  }
+}

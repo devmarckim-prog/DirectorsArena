@@ -1,0 +1,17 @@
+[
+  {
+    "id": "302e6482-b632-48c6-8bdb-6262ef6b3212",
+    "title": "[가칭] 한양대",
+    "genre": "Noir",
+    "platform": "ott",
+    "duration": 60,
+    "world": "Contemporary",
+    "logline": "한양대 컴공 박사들의 연애기",
+    "status": "BAKING",
+    "progress": 10,
+    "is_sample": false,
+    "created_at": "2026-10-22T05:42:39.534Z",
+    "synopsis": "{\"seed\":true,\"formData\":{\"platform\":\"ott\",\"genres\":[\"Noir\"],\"episodes\":6,\"duration\":60,\"logline\":\"한양대 컴공 박사들의 연애기\",\"world\":{\"year\":1649,\"region\":\"KR\",\"setting\":\"Contemporary\",\"tone\":\"Dark\"},\"characters\":[{\"id\":\"051xovc4a\",\"name\":\"\",\"gender\":\"Male\",\"age\":25,\"job\":\"\",\"biometrics\":{\"bloodType\":\"A\",\"stature\":\"175cm\",\"habit\":\"Tapping fingers\"},\"relationship\":{\"targetId\":\"\",\"type\":\"\"},\"look\":\"\",\"void\":\"\",\"desire\":\"\",\"secret\":\"\"},{\"id\":\"s3ky8w293\",\"name\":\"\",\"gender\":\"Male\",\"age\":25,\"job\":\"\",\"biometrics\":{\"bloodType\":\"A\",\"stature\":\"175cm\",\"habit\":\"Tapping fingers\"},\"relationship\":{\"targetId\":\"\",\"type\":\"\"},\"look\":\"\",\"void\":\"\",\"desire\":\"\",\"secret\":\"\"},{\"id\":\"9bu04adiv\",\"name\":\"\",\"gender\":\"Male\",\"age\":25,\"job\":\"\",\"biometrics\":{\"bloodType\":\"A\",\"stature\":\"175cm\",\"habit\":\"Tapping fingers\"},\"relationship\":{\"targetId\":\"\",\"type\":\"\"},\"look\":\"\",\"void\":\"\",\"desire\":\"\",\"secret\":\"\"},{\"id\":\"0nf3rniqf\",\"name\":\"\",\"gender\":\"Male\",\"age\":25,\"job\":\"\",\"biometrics\":{\"bloodType\":\"A\",\"stature\":\"175cm\",\"habit\":\"Tapping fingers\"},\"relationship\":{\"targetId\":\"\",\"type\":\"\"},\"look\":\"\",\"void\":\"\",\"desire\":\"\",\"secret\":\"\"}]}}",
+    "updated_at": "2026-10-22T05:42:39.534Z"
+  }
+]

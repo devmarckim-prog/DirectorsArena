@@ -10,20 +10,20 @@ const supabase = createClient(
 );
 
 async function check() {
-  console.log('--- Checking Supabase projects_v2 table ---');
-  const { data, error, count } = await supabase
-    .from('projects_v2')
-    .select('*', { count: 'exact' });
+  console.log('--- Checking Supabase users table ---');
+  const { data: users, error: userError } = await supabase
+    .from('users')
+    .select('id, email, role, credits, plan, full_name, avatar_url, created_at');
 
-  if (error) {
-    console.error('Error:', error);
+  if (userError) {
+    console.error('Error fetching users:', userError);
     return;
   }
 
-  console.log('Total projects found:', count);
-  if (data) {
-    data.forEach(p => {
-      console.log(`[${p.id}] ${p.title} (Sample: ${p.is_sample})`);
+  console.log('Total users found:', users?.length);
+  if (users) {
+    users.forEach(u => {
+      console.log(`[${u.id}] Email: ${u.email}, Role: ${u.role}, Credits: ${u.credits}, Name: ${u.full_name}, Avatar: ${u.avatar_url}`);
     });
   }
 }

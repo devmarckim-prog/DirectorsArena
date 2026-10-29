@@ -100,7 +100,7 @@ export function Header() {
             {/* Version Badge */}
             <div className="flex items-center gap-2 group transition-all">
               <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,1)]" />
-              <span className="text-[12px] font-black text-indigo-400 uppercase tracking-[0.1em]">Build v10.3.1 (Hotfix Action)</span>
+              <span className="text-[12px] font-black text-indigo-400 uppercase tracking-[0.1em]">Build v10.3.2 (Dynamic Motion Graphic)</span>
             </div>
 
             {/* Platform Intro Motion Graphic Link */}
