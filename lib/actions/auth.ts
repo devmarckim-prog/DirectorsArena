@@ -15,7 +15,7 @@ export async function pocLoginAction() {
     sameSite: 'lax'
   });
   revalidatePath('/', 'layout');
-  redirect('/project-list');
+  return { success: true };
 }
 
 export async function loginAction(formData: FormData) {

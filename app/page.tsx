@@ -14,15 +14,13 @@ export default function LandingPage() {
 
   const handlePocLogin = async () => {
     setIsPocLoading(true);
+    document.cookie = "da_poc_admin=true; path=/; max-age=604800; SameSite=Lax";
     try {
-      // 1. Direct client cookie setting for zero-latency client recognition
-      document.cookie = "da_poc_admin=true; path=/; max-age=604800; SameSite=Lax";
-      // 2. Server action to sync session
       await pocLoginAction();
     } catch (e) {
-      // Failsafe direct route navigation
-      window.location.href = "/project-list";
+      // safe fallback
     }
+    window.location.href = "/project-list";
   };
 
   return (
