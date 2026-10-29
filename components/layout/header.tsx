@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Shield, Clapperboard } from "lucide-react";
+import { Shield, PlayCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/auth/user-menu";
 import { supabase } from "@/lib/supabase/client";
 import { getCurrentUserAction } from "@/app/actions";
+import { SamiyaLogo } from "@/components/brand/samiya-logo";
 
 export function Header() {
   const pathname = usePathname();
@@ -16,6 +17,7 @@ export function Header() {
   const isProjectPage = pathname?.includes('/project-contents/');
   const isLandingPage = pathname === '/';
   const isAdminPage = pathname?.startsWith('/admin');
+  const isIntroPage = pathname === '/intro';
 
   useEffect(() => {
     const checkUser = async () => {
@@ -71,7 +73,7 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (isLandingPage || isAdminPage) return null;
+  if (isLandingPage || isAdminPage || isIntroPage) return null;
 
   return (
     <header className={cn(
@@ -79,16 +81,13 @@ export function Header() {
       !isProjectPage && "border-b border-white/5"
     )}>
       <div className="max-w-[1440px] mx-auto h-full flex items-center justify-between px-16 relative">
-        {/* FAR LEFT: Master Logo */}
+        {/* FAR LEFT: Master Samiya Logo */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-brand-gold flex items-center justify-center shadow-[0_0_20px_rgba(197,160,89,0.4)] group-hover:scale-105 transition-transform">
-              <Clapperboard size={20} className="text-black" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-black text-white tracking-[0.2em] leading-none uppercase">Directors</span>
-              <span className="text-sm font-black text-brand-gold tracking-[0.2em] leading-none uppercase mt-1">Arena</span>
-            </div>
+            <SamiyaLogo size="md" variant="vector" />
+            <span className="hidden sm:inline-block text-[10px] font-bold tracking-[0.2em] text-neutral-500 uppercase ml-1">
+              Studio
+            </span>
           </Link>
         </div>
 
@@ -100,9 +99,19 @@ export function Header() {
           <div className="flex items-center gap-4">
             {/* Version Badge */}
             <div className="flex items-center gap-2 group transition-all">
-              <div className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(197,160,89,1)]" />
-              <span className="text-[12px] font-black text-brand-gold uppercase tracking-[0.1em]">Build v10.2.2 (Admin & POC Fix)</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,1)]" />
+              <span className="text-[12px] font-black text-indigo-400 uppercase tracking-[0.1em]">Build v10.3.0 (Samiya)</span>
             </div>
+
+            {/* Platform Intro Motion Graphic Link */}
+            <Link
+              href="/intro"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white transition-all text-xs font-black shadow-[0_0_15px_rgba(99,102,241,0.3)] group"
+              title="플랫폼 모션 그래픽 소개 영상 보기"
+            >
+              <PlayCircle size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span>소개 영상</span>
+            </Link>
 
             {/* Direct Admin Console Link */}
             {isAdmin && (
