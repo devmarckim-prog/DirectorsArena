@@ -16,6 +16,8 @@ export default function CreateProjectPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProducing, setIsProducing] = useState(false);
+  const [engineMode, setEngineMode] = useState<"api" | "poc">("api");
+  const [producingText, setProducingText] = useState("Claude AI가 시네마틱 서사와 인물 관계도를 실시간 집필 중입니다...");
   const [isComplete, setIsComplete] = useState(false);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [requiredCredits, setRequiredCredits] = useState(10);
@@ -47,7 +49,10 @@ export default function CreateProjectPage() {
         }
 
         // Phase 2: Engine Ignition (Targeting 10% -> 11%+)
-        const igniteResponse = await fetch(`/api/ignite/${result.projectId}`, { method: 'POST' });
+        const igniteResponse = await fetch(`/api/ignite/${result.projectId}?engine=${engineMode}`, { 
+            method: 'POST',
+            headers: { 'x-engine-mode': engineMode }
+        });
         
         if (igniteResponse.status === 402) {
             const errData = await igniteResponse.json();
@@ -61,18 +66,26 @@ export default function CreateProjectPage() {
             const reader = igniteResponse.body.getReader();
             const decoder = new TextDecoder();
             
-            // Wait for the very first chunk to confirm streaming has begun
-            const { value } = await reader.read();
-            if (value) {
-                console.log("[Wizard] First chunk received. Engine Ignited. Gate Open.");
-                // v8.4: Add intentional delay for DB propagation and UX
-                await new Promise(r => setTimeout(r, 800));
-                
-                // v9.0: Show completion message instead of immediate redirect
-                setIsProducing(false);
-                setIsComplete(true);
+            setProducingText(engineMode === 'api' 
+              ? "실시간 Claude AI와 연결 성공! 서사 및 인물 데이터를 생성 중..." 
+              : "POC 더미 데이터 생성 중..."
+            );
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                if (chunk.includes('STREAMING_STARTED')) {
+                    setProducingText("Claude AI가 세계관, 4대 캐릭터, 1화 대본을 실시간 작성 중...");
+                }
+                if (chunk.includes('COMPLETE') || chunk.includes('"status":"COMPLETE"')) {
+                    break;
+                }
             }
-            reader.cancel();
+
+            await new Promise(r => setTimeout(r, 600));
+            setIsProducing(false);
+            setIsComplete(true);
         } else {
             throw new Error("Failed to ignite generation engine");
         }
@@ -133,7 +146,35 @@ export default function CreateProjectPage() {
         </div>
 
         {/* v11.0: Fixed Bottom Navigation Bar for consistent 'Void' control */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-6 z-[100] bg-neutral-950/80 backdrop-blur-2xl px-8 py-3 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.7)]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-4 md:space-x-6 z-[100] bg-neutral-950/90 backdrop-blur-2xl px-5 md:px-8 py-3 rounded-full border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+           {/* Engine Mode Selector */}
+           <div className="flex items-center space-x-1.5 bg-neutral-900/90 px-3 py-1.5 rounded-full border border-white/10">
+             <button
+               type="button"
+               onClick={() => setEngineMode('api')}
+               className={cn(
+                 "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center space-x-1",
+                 engineMode === 'api' 
+                   ? "bg-brand-gold text-black shadow-[0_0_12px_rgba(197,160,89,0.5)]" 
+                   : "text-neutral-400 hover:text-white"
+               )}
+             >
+               <span>🤖 Claude API</span>
+             </button>
+             <button
+               type="button"
+               onClick={() => setEngineMode('poc')}
+               className={cn(
+                 "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center space-x-1",
+                 engineMode === 'poc' 
+                   ? "bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.5)]" 
+                   : "text-neutral-400 hover:text-white"
+               )}
+             >
+               <span>⚡ POC 더미</span>
+             </button>
+           </div>
+           <div className="w-[1px] h-4 bg-white/10" />
            {currentStep > 1 && (
              <button onClick={prevStep} className="text-neutral-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest px-4">
                Back
@@ -188,7 +229,7 @@ export default function CreateProjectPage() {
                 transition={{ duration: 1.5, repeat: Infinity }}
                 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none px-4"
               >
-                당신의 대박 스토리가 생성되고 있습니다
+                {producingText}
               </motion.p>
             </motion.div>
           </motion.div>

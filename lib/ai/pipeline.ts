@@ -9,7 +9,7 @@ import { getAdminSettingsAction } from '../actions/admin';
  */
 export async function generateDraft(sceneInfo: any) {
   const adminSettings = await getAdminSettingsAction();
-  const modelId = getResolvedModelId(adminSettings.model_id_primary, 'claude-3-haiku-20240307');
+  const modelId = getResolvedModelId(adminSettings.model_id_primary, 'claude-haiku-4-5-20251001');
 
   return streamObject({
     model: anthropic(modelId),
@@ -24,7 +24,7 @@ export async function generateDraft(sceneInfo: any) {
  */
 export async function auditScene(sceneData: any) {
   const adminSettings = await getAdminSettingsAction();
-  const modelId = getResolvedModelId(adminSettings.model_id_fast, 'claude-3-haiku-20240307');
+  const modelId = getResolvedModelId(adminSettings.model_id_fast, 'claude-haiku-4-5-20251001');
 
   const auditResult = await generateObject({
     model: anthropic(modelId),

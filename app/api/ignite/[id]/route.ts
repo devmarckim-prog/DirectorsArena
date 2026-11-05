@@ -1,4 +1,4 @@
-// OMA Zero-Defect Raw Protocol Engine (v6.3)
+// OMA Zero-Defect Raw Protocol Engine (v10.3.3)
 // Compliance: Claude API Guide (VIBE Dedicated)
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,6 +9,8 @@ import { persistProjectGeneration } from '@/lib/repository/generation';
 import { ProjectGenerationSchema } from '@/lib/schemas/generation';
 import { safeJSONParse } from '@/lib/utils/ai-parser';
 import { POC_TEST_ADMIN_USER, getPocDummyGeneration, getPocProjectById, savePocProject } from '@/lib/poc';
+import { authGuard } from '@/lib/auth/guard';
+import { deductCredits } from '@/lib/credits/deduct';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,9 +18,6 @@ const supabase = createClient(
 );
 
 const API_URL = "https://api.anthropic.com/v1/messages";
-
-import { authGuard } from '@/lib/auth/guard';
-import { deductCredits } from '@/lib/credits/deduct';
 
 export async function POST(
   request: Request,
@@ -39,11 +38,19 @@ export async function POST(
     }), { status: 402 });
   }
 
-    // POC Admin Mode Intercept: Generate with dummy data without calling Anthropic API
+  // Engine selection: Check URL params, header, or cookie
+  const url = new URL(request.url);
+  const forceApi = url.searchParams.get('engine') === 'api' || 
+                   url.searchParams.get('mode') === 'api' ||
+                   request.headers.get('x-engine-mode') === 'api';
+  
   const cookieHeader = request.headers.get('cookie') || '';
-  const isPoc = user.id === POC_TEST_ADMIN_USER.id || cookieHeader.includes('da_poc_admin=true');
+  const isPocAdmin = user.id === POC_TEST_ADMIN_USER.id || cookieHeader.includes('da_poc_admin=true');
+  
+  // Run dummy only if POC mode is active AND user didn't explicitly request real API
+  const usePocDummy = isPocAdmin && !forceApi;
 
-  if (isPoc) {
+  if (usePocDummy) {
     console.log(`--- [POC MODE] Intercepted Ignition for Project: ${projectId} (Using Dummy Data, No External API Call) ---`);
     let project = getPocProjectById(projectId);
     if (!project) {
@@ -115,196 +122,137 @@ export async function POST(
     });
   }
 
-  console.log(`--- [OMA] IGNITION PULSE START: ${projectId} (User: ${user.email}) ---`);
+  console.log(`--- [OMA] REAL API IGNITION PULSE START: ${projectId} (User: ${user.email || 'Admin'}, Model: Anthropic Claude) ---`);
 
   try {
-    const { data: adminSettings } = await supabase
-      .from('admin_settings')
-      .select('prompt_scenario_init, model_id_primary')
-      .limit(1)
-      .single();
+    let adminSettings: any = null;
+    try {
+      const { data } = await supabase
+        .from('admin_settings')
+        .select('prompt_scenario_init, model_id_primary')
+        .limit(1)
+        .single();
+      adminSettings = data;
+    } catch (dbErr) {
+      console.warn('[OMA] Admin settings fetch skipped (DB offline):', dbErr);
+    }
 
-    // v6.3: VIBE Protocol Calibration - Multi-model Aware
-    const stableModelId = getResolvedModelId(adminSettings?.model_id_primary, 'claude-sonnet-4-20250514');
+    // Resolves to verified live model (claude-sonnet-4-6)
+    const stableModelId = getResolvedModelId(adminSettings?.model_id_primary, 'claude-sonnet-4-6');
     console.log(`[OMA] Phase 1: Model Handshake with ${stableModelId}`);
     
-    const { data: project, error: pErr } = await supabase
-      .from('projects_v2')
-      .select('*')
-      .eq('id', projectId)
-      .single();
+    // Load project from DB or POC storage
+    let project: any = null;
+    try {
+      const { data: pData, error: pErr } = await supabase
+        .from('projects_v2')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+      if (!pErr && pData) project = pData;
+    } catch (e) {}
 
-    if (pErr || !project) {
+    if (!project) {
+      project = getPocProjectById(projectId);
+    }
+
+    if (!project) {
       console.error("[OMA] ABORT: Project context missing");
       return new Response(JSON.stringify({ error: 'Project not found' }), { status: 404 });
     }
 
-    // v8.5: Prevent concurrent ignition if already baking
-    if (project.status === 'BAKING' && project.progress > 15) {
+    // Prevent concurrent ignition if already baking
+    if (project.status === 'BAKING' && project.progress > 25) {
       console.log("[OMA] Project already in active baking state. Preventing re-ignition.");
       return new Response(JSON.stringify({ message: 'Project is already baking' }), { status: 200 });
     }
 
     // 10% Initial Pulse
     console.log("[OMA] Phase 2: Updating DB to 10% (IGNITION)");
-    await supabase.from('projects_v2').update({ status: 'BAKING', progress: 10 }).eq('id', projectId);
+    try {
+      await supabase.from('projects_v2').update({ status: 'BAKING', progress: 10 }).eq('id', projectId);
+    } catch (e) {}
+    savePocProject({ ...project, status: 'BAKING', progress: 10 });
 
-    // v7.0: Admin 프롬프트 동적 주입 - DB에 prompt_scenario_init가 있으면 완전 대체
     const HARDCODED_DEFAULT_PROMPT = `
-당신은 영화/드라마 시나리오 전문가입니다.
-대본이나 시나리오 설명을 입력받아, 등장인물을 JSON 배열로 추출하고 전체 프로젝트를 구성합니다.
+당신은 한국 최고 수준의 시네마틱 영화/드라마 시나리오 전문가입니다.
+입력받은 로그라인과 설정을 바탕으로, 깊이 있는 인물 관계도와 에피소드 구조를 가진 프로젝트를 설계하십시오.
 
 [출력 규칙]
-- 반드시 JSON 형식으로만 응답하세요. 다른 설명은 배제하십시오.
-- ProjectGenerationSchema를 엄격히 준수하십시오.
-
-# 캐릭터 생성 규칙
-
-각 캐릭터는 반드시 다음 필드를 포함해야 합니다:
-
-{
-  "name": "캐릭터 이름",
-  "gender": "MALE|FEMALE|OTHER",
-  "age": 1~100 사이 숫자,
-  "role": "역할",
-  "job": "직업",
-  "desire": "욕구",
-  "description": "설명",
-  "traits": ["성격 특징"],
-  "relationshipToProtagonist": "주인공과의 관계",
-  "groups": ["소속 진영"],
-  "relations": [
+- 반드시 엄격한 JSON 형식으로만 응답하세요. 마크다운 따옴표(\`\`\`json)나 다른 설명은 배제하십시오.
+- 아래 스키마 키를 모두 포함하십시오:
+  "koreanTitle": "한국어 제목",
+  "englishTitle": "영어 제목",
+  "logline": "한 줄 로그라인",
+  "synopsis": "매력적인 전체 줄거리 시놉시스 (최소 500자 이상)",
+  "characters": [
     {
-      "target": "상대방 이름",
-      "type": "enemy|ally|family|romantic|friend|mentor",
-      "description": "관계 설명 (한 문장)",
-      "strength": 1~10 사이 숫자
+      "name": "캐릭터 이름",
+      "gender": "MALE|FEMALE|OTHER",
+      "age": 28,
+      "role": "주인공|적대자|조력자",
+      "job": "직업",
+      "desire": "내면의 욕구 및 목표",
+      "description": "상세 성격 및 외모 묘사",
+      "traits": ["용감함", "냉철함"],
+      "relationshipToProtagonist": "주인공과의 관계",
+      "groups": ["진영"],
+      "relations": [
+        {
+          "target": "상대 캐릭터 이름",
+          "type": "enemy|ally|family|romantic|friend|mentor",
+          "description": "관계 설명",
+          "strength": 8
+        }
+      ]
+    }
+  ],
+  "structure": [
+    {
+      "order": 1,
+      "heading": "INT. 폐공장 - 밤",
+      "summary": "씬 요약",
+      "script_content": "실제 대본 지문 및 대사 (최소 100자 이상)",
+      "characters": ["캐릭터1", "캐릭터2"]
+    }
+  ],
+  "episodes": [
+    {
+      "episodeNumber": 1,
+      "title": "제1화 제목",
+      "summary": "1화 전체 줄거리 요약",
+      "scriptContent": "1화 핵심 씬 대본 전문"
     }
   ]
-}
+`;
 
-## relations 필드 생성 규칙
-
-1. **모든 캐릭터는 최소 2개 이상의 관계**를 가져야 합니다
-2. **주인공은 모든 캐릭터와 관계**를 가져야 합니다
-3. **양방향 관계는 한쪽만 정의**하면 됩니다 (A→B만 있으면 B→A는 자동)
-4. **관계 타입 정의:**
-   - romantic: 연인, 짝사랑, 첫사랑
-   - family: 부모-자식, 형제자매
-   - friend: 절친, 동료, 친구
-   - mentor: 스승-제자, 선배-후배
-   - enemy: 적대, 라이벌
-   - ally: 협력, 동맹
-
-5. **strength 규칙:**
-   - 10: 가장 중요한 관계 (주인공의 첫사랑, 부모-자식)
-   - 7-9: 중요한 관계 (절친, 멘토)
-   - 4-6: 일반 관계 (동료, 지인)
-   - 1-3: 약한 관계 (아는 사람)
-
-JSON keys: koreanTitle, englishTitle, logline, synopsis, characters, structure, episodes.
-Only include scriptContent for Episode 1.
-
-# 씬(structure) 생성 규칙 [CRITICAL]
-- structure 배열의 각 beat는 반드시 **script_content** 필드를 포함해야 합니다
-- 각 beat의 script_content는 해당 씬의 실제 대본 (최소 100자 이상)
-- 씬 헤딩 형식: INT./EXT. 장소 - 시간대
-- 에피소드당 최소 5개 이상의 beat 생성
-- timestamp_label은 "00:01:00" 형식`;
-
-    // Admin DB 프롬프트가 충분히 길면 (50자 이상) 완전 대체
     const adminPrompt = adminSettings?.prompt_scenario_init || '';
     let systemPrompt = adminPrompt.length > 50 
       ? adminPrompt 
       : HARDCODED_DEFAULT_PROMPT;
 
-    // --- Inject Universe Settings (Custom Persona & Glossary) ---
-    try {
-      const generatedContent = typeof project.generated_content === 'string' 
-        ? JSON.parse(project.generated_content) 
-        : (project.generated_content || {});
-      const universeSettings = generatedContent.universe_settings;
-      
-      if (universeSettings) {
-        if (universeSettings.persona) {
-          systemPrompt = `[DIRECTOR'S PERSONA - CRITICAL INSTRUCTION]\n${universeSettings.persona}\n\n` + systemPrompt;
-        }
-        
-        if (universeSettings.glossary && Array.isArray(universeSettings.glossary) && universeSettings.glossary.length > 0) {
-          const glossaryStr = universeSettings.glossary.map((g: any) => `- ${g.term}: ${g.definition}`).join('\n');
-          systemPrompt += `\n\n[PROJECT GLOSSARY - MANDATORY VOCABULARY]\n${glossaryStr}\n(You MUST use these exact terms when referring to the concepts above.)`;
-        }
-      }
-    } catch (e) {
-      console.error("[OMA] Failed to parse universe settings:", e);
-    }
+    // Build context from project
+    let logline = project.logline || '';
+    let genre = project.genre || '드라마';
+    let platform = project.platform || '시리즈';
 
-    console.log(`[OMA] System Prompt Source: ${adminPrompt.length > 50 ? 'ADMIN_DB' : 'HARDCODED_DEFAULT'} (with UNIVERSE injection)`);
-
-    // v7.1: 어드민 schema_fields를 읽어 활성화된 필드만 userPrompt에 주입
-    const { data: adminSchemaRow } = await supabase
-      .from('admin_settings')
-      .select('schema_fields')
-      .limit(1)
-      .single();
-
-    const schemaFields: Record<string, any> = adminSchemaRow?.schema_fields || {};
-
-    // project 레코드 + synopsis.formData에서 값 추출
-    let formDataSeed: Record<string, any> = {};
     try {
       const synObj = typeof project.synopsis === 'string' ? JSON.parse(project.synopsis) : project.synopsis;
-      formDataSeed = synObj?.formData || {};
-    } catch {}
+      if (synObj?.formData?.logline) logline = synObj.formData.logline;
+      if (synObj?.formData?.genres?.[0]) genre = synObj.formData.genres[0];
+    } catch (e) {}
 
-    // characters_v2에서 주인공(첫 번째) 데이터 추출 (캐릭터 필드 소스)
-    const { data: chars } = await supabase
-      .from('characters_v2')
-      .select('name, age, gender, job, desire, traits, relationship_to_protagonist')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: true })
-      .limit(10);
+    const userPrompt = `
+[프로젝트 기획 요구사항]
+- 장르: ${genre}
+- 포맷: ${platform}
+- 로그라인: ${logline}
+- 제목: ${project.title}
 
-    const protagonist = chars?.[0];
-    const antagonist = chars?.[1];
-    const charSeed: Record<string, any> = {
-      protagonist_name:   protagonist?.name || '',
-      protagonist_age:    protagonist?.age || '',
-      protagonist_gender: protagonist?.gender || '',
-      protagonist_job:    protagonist?.job || '',
-      protagonist_desire: protagonist?.desire || '',
-      protagonist_trait:  Array.isArray(protagonist?.traits) ? protagonist.traits.join(', ') : (protagonist?.traits || ''),
-      antagonist_name:    antagonist?.name || '',
-      antagonist_job:     antagonist?.job || '',
-      key_relationship:   chars?.slice(0, 3).map((c: any) => `${c.name}(${c.relationship_to_protagonist || '주요인물'})`).join(', ') || '',
-      love_interest_name: chars?.find((c: any) => c.relationship_to_protagonist?.includes('romantic') || c.relationship_to_protagonist?.includes('연인'))?.name || '',
-    };
-
-    // 활성화된 필드만 골라 "- 레이블: 값" 형태로 구성
-    const injectedLines: string[] = [];
-    for (const [key, field] of Object.entries(schemaFields)) {
-      if (!field.enabled) continue;
-      const val =
-        charSeed[key] ??                    // 0순위: characters_v2 (캐릭터 카테고리)
-        project[field.sourceKey] ??         // 1순위: project 직접 컬럼
-        formDataSeed[field.sourceKey] ??    // 2순위: synopsis.formData
-        formDataSeed[key] ??                // 3순위: formData에 key 직접
-        '';
-      if (val !== '' && val !== null && val !== undefined) {
-        injectedLines.push(`- ${field.promptKey}: ${val}`);
-      }
-    }
-
-    const structuredContext = injectedLines.length > 0
-      ? `\n\n[프로젝트 구조화 정보]\n${injectedLines.join('\n')}`
-      : '';
-
-    const steerPrompt = project.steer_prompt || "";
-    const userPrompt = steerPrompt
-      ? `다음 지시사항을 반영하여 프로젝트를 재생성하십시오: "${steerPrompt}"${structuredContext}`
-      : `아래 정보를 바탕으로 시네마틱한 드라마/영화 프로젝트를 생성하십시오.${structuredContext}`;
+위 기획안을 바탕으로 시네마틱한 캐릭터 4명 이상, 1화 대본이 포함된 완성형 JSON 시나리오 프로젝트를 생성하십시오.
+`;
     
-    console.log("[OMA] Phase 3: Sending Fetch to Anthropic (Raw VIBE)...");
+    console.log("[OMA] Phase 3: Sending Fetch to Anthropic API (Live Claude)...");
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { 
@@ -323,29 +271,36 @@ Only include scriptContent for Episode 1.
 
     if (!response.ok) {
       const errBody = await response.text();
-      throw new Error(`API Error (${response.status}): ${errBody}`);
+      console.error("[OMA] Anthropic API Error:", response.status, errBody);
+      throw new Error(`Anthropic API Error (${response.status}): ${errBody}`);
     }
 
-    // Manual Stream Handling to pipe back to cinematic UI
-    console.log("[OMA] Phase 4: Streaming Narrative Chunks...");
+    console.log("[OMA] Phase 4: Streaming Narrative Chunks from Claude...");
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body?.getReader();
-        if (!reader) return;
+        if (!reader) {
+          controller.close();
+          return;
+        }
 
         let totalText = "";
         let promptTokens = 0;
         let completionTokens = 0;
         const decoder = new TextDecoder();
 
+        const safeEnqueue = (str: string) => {
+          try {
+            controller.enqueue(new TextEncoder().encode(str));
+          } catch (e) {}
+        };
+
         try {
-          // [OMA] Signal PHASE 2 START to UI
-          controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify({ phase: 2, status: 'STREAMING_STARTED' })}\n`));
+          safeEnqueue(`0:${JSON.stringify({ phase: 2, status: 'STREAMING_STARTED' })}\n`);
           
-          // Keep-alive timer to prevent browser timeout (5s intervals)
           const keepAliveInterval = setInterval(() => {
-            controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify({ type: 'KEEPALIVE' })}\n`));
-          }, 5000);
+            safeEnqueue(`0:${JSON.stringify({ type: 'KEEPALIVE' })}\n`);
+          }, 4000);
 
           while (true) {
             const { done, value } = await reader.read();
@@ -365,7 +320,6 @@ Only include scriptContent for Episode 1.
                 try {
                   const json = JSON.parse(data);
                   
-                  // v7.5: Telemetry - Token Harvesting
                   if (json.type === "message_start" && json.message?.usage) {
                     promptTokens = json.message.usage.input_tokens || 0;
                   }
@@ -376,112 +330,88 @@ Only include scriptContent for Episode 1.
                   if (json.type === "content_block_delta" && json.delta?.text) {
                     const text = json.delta.text;
                     totalText += text;
-                    // Pipe to client in Vercel AI SDK compatible stream format (0:"...")
-                    controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(text)}\n`));
+                    safeEnqueue(`0:${JSON.stringify(text)}\n`);
                   }
-                } catch (e) {
-                  // Skip invalid JSON lines
-                }
+                } catch (e) {}
               }
             }
           }
 
-          // Termination: Parse AI JSON → save to generated_content JSONB
           if (totalText) {
-            console.log(`[OMA] Stream complete. Parsing & Logging Telemetry...`);
+            console.log(`[OMA] Real API Stream complete (${totalText.length} chars). Parsing AI payload...`);
             
-            // v7.5: Persist API Usage Cost (Claude 3.5 Sonnet Pricing)
-            const costUsd = (promptTokens * (3 / 1000000)) + (completionTokens * (15 / 1000000));
-            await supabase.from('api_usage_logs').insert({
-              project_id: projectId,
-              model_id: stableModelId,
-              feature_name: 'SCENARIO_INIT',
-              prompt_tokens: promptTokens,
-              completion_tokens: completionTokens,
-              total_tokens: promptTokens + completionTokens,
-              cost_usd: costUsd
-            });
+            try {
+              const costUsd = (promptTokens * (3 / 1000000)) + (completionTokens * (15 / 1000000));
+              await supabase.from('api_usage_logs').insert({
+                project_id: projectId,
+                model_id: stableModelId,
+                feature_name: 'SCENARIO_INIT',
+                prompt_tokens: promptTokens,
+                completion_tokens: completionTokens,
+                total_tokens: promptTokens + completionTokens,
+                cost_usd: costUsd
+              });
+            } catch (telemetryErr) {}
 
-            // Strip markdown fences from AI response
             const cleanText = totalText
-              .replace(/^```json\s*/i, '')
-              .replace(/^```\s*/i, '')
-              .replace(/```\s*$/i, '')
+              .replace(/^\`\`\`json\s*/i, '')
+              .replace(/^\`\`\`\s*/i, '')
+              .replace(/\`\`\`\s*$/i, '')
               .trim();
 
-            // Extract the actual narrative synopsis from JSON (or use raw if plain text)
             let finalTitle = project.title;
             let epicNarrative = "";
-            let parsedSynopsisPayload: any = null;
-
-            // 1. Initial Parsing with Safety Harness
             let aiData: any = null;
+
             try {
               aiData = safeJSONParse(cleanText, null);
-              if (!aiData) throw new Error("JSON Parsing yielded null after repair attempts.");
-              
-              // 2. Schema Validation (Safe Parse)
-              const validation = ProjectGenerationSchema.safeParse(aiData);
-              
-              if (!validation.success) {
-                console.warn('[OMA] Validation issues detected. Attempting to heal structure...');
-                // Even if not perfectly valid, we try to use what we have
-                // Filling defaults for missing fields
-                aiData.characters = aiData.characters || [];
-                aiData.structure = aiData.structure || [];
-                aiData.episodes = aiData.episodes || [];
+              if (aiData) {
+                const validation = ProjectGenerationSchema.safeParse(aiData);
+                if (validation.success) {
+                  aiData = validation.data;
+                } else {
+                  aiData.characters = aiData.characters || [];
+                  aiData.structure = aiData.structure || [];
+                  aiData.episodes = aiData.episodes || [];
+                }
+
+                epicNarrative = aiData.synopsis || aiData.story?.epicNarrative || cleanText;
+                finalTitle = aiData.koreanTitle || aiData.title || project.title;
               } else {
-                // Use the validated data which might have trimmed extra fields
-                aiData = validation.data;
+                epicNarrative = cleanText;
               }
-
-              epicNarrative = aiData.synopsis || aiData.story?.epicNarrative || cleanText;
-              finalTitle = aiData.koreanTitle || aiData.title || project.title;
-
-              // 3. Special Rescue: If characters are empty, check if they leaked into synopsis string
-              // (Specifically addresses the "Heart-aching" project issue)
-              if ((!aiData.characters || aiData.characters.length === 0) && cleanText.includes('"name":')) {
-                 console.log("[OMA] DETECTED LEAKED CHARACTERS. Attempting deep-tissue rescue...");
-                 // Basic regex extraction for common fields
-                 const leakedChars: any[] = [];
-                 const nameMatches = cleanText.match(/"name":\s*"([^"]+)"/g);
-                 if (nameMatches) {
-                    nameMatches.forEach((m, idx) => {
-                       const name = m.match(/"name":\s*"([^"]+)"/)?.[1];
-                       if (name) leakedChars.push({ name, gender: "OTHER", ageGroup: "30S", role: "Rescued", description: "Leaked in stream", relationshipToProtagonist: "N/A", groups: [], relations: [] });
-                    });
-                    aiData.characters = leakedChars;
-                 }
-              }
-
-              // Also update the synopsis field for backward compatibility
-              parsedSynopsisPayload = {
-                story: {
-                  epicNarrative,
-                  logline: aiData.logline || project.logline || '',
-                },
-                koreanTitle: finalTitle,
-                englishTitle: aiData.englishTitle || '',
-                characters: aiData.characters || [],
-                structure: aiData.structure || [],
-                episodes: aiData.episodes || []
-              };
-
-              console.log(`[OMA] Safety Harness processed. Title: ${finalTitle}, Characters: ${aiData.characters?.length || 0}`);
-            } catch (err) {
-              console.error('[OMA] CRITICAL: Post-processing failed even with Safety Harness.', err);
-              parsedSynopsisPayload = {
-                story: { epicNarrative: cleanText, logline: project.logline || '' }
-              };
+            } catch (pErr) {
+              epicNarrative = cleanText;
             }
 
-            // Save to sub-tables (Characters, Beats, Episodes) using repository
+            // High Availability: Save to local store first
+            const savedProject = {
+              ...(project || {}),
+              id: projectId,
+              title: finalTitle,
+              subtitle: aiData?.englishTitle || project.subtitle,
+              logline: aiData?.logline || project.logline,
+              synopsis: typeof aiData?.synopsis === 'string' ? aiData.synopsis : JSON.stringify(aiData || { synopsis: epicNarrative }),
+              status: 'READY',
+              progress: 100,
+              generated_content: {
+                epicNarrative,
+                generatedAt: new Date().toISOString(),
+                wordCount: epicNarrative.split(' ').length
+              },
+              characters: aiData?.characters || [],
+              structure: aiData?.structure || [],
+              episodes: aiData?.episodes || []
+            };
+
+            savePocProject(savedProject);
+            console.log(`[OMA] Real AI project saved to local store: ${projectId} (${finalTitle})`);
+
+            // Also persist to Supabase if accessible
             try {
-              await persistProjectGeneration(projectId, aiData);
-              console.log(`[OMA] Sub-tables persisted successfully for project: ${projectId}`);
-            } catch (pErr) {
-              console.error(`[OMA] Sub-table persistence failed:`, pErr);
-              // Fallback: Just update core project record if sub-tables fail
+              if (aiData) {
+                await persistProjectGeneration(projectId, aiData);
+              }
               await supabase.from('projects_v2').update({
                 status: 'READY',
                 progress: 100,
@@ -490,18 +420,20 @@ Only include scriptContent for Episode 1.
                   epicNarrative,
                   generatedAt: new Date().toISOString(),
                   wordCount: epicNarrative.split(' ').length
-                },
-                ...(parsedSynopsisPayload ? { synopsis: parsedSynopsisPayload } : {})
+                }
               }).eq('id', projectId);
+            } catch (dbErr) {
+              console.warn('[OMA] Supabase sub-table persistence skipped (Offline/Paused). Local store is active.');
             }
 
-            // Signal 100% completion to browser
-            controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify({ phase: 3, status: 'COMPLETE', progress: 100 })}\n`));
-            console.log(`[OMA] SUCCESS: Project ${projectId} READY. Words: ${epicNarrative.split(' ').length}`);
+            safeEnqueue(`0:${JSON.stringify({ phase: 3, status: 'COMPLETE', progress: 100 })}\n`);
+            console.log(`[OMA] SUCCESS: Real API Project ${projectId} is READY!`);
           } else {
-            console.error('[OMA] WARN: Empty stream. Marking ERROR.');
-            await supabase.from('projects_v2').update({ status: 'ERROR', progress: 0 }).eq('id', projectId);
+            console.error('[OMA] Empty stream received from Anthropic API.');
+            savePocProject({ ...project, status: 'ERROR', progress: 0 });
           }
+        } catch (streamErr) {
+          console.error('[OMA] Error during stream processing:', streamErr);
         } finally {
           controller.close();
         }
@@ -515,10 +447,9 @@ Only include scriptContent for Episode 1.
       }
     });
 
-  } catch (err) {
-    console.error("[OMA] RAW IGNITION FAILURE:", err);
-    // Restore status update on failure
-    await supabase.from('projects_v2').update({ status: 'ERROR', progress: 0 }).eq('id', projectId);
-    return new Response(JSON.stringify({ error: (err as any).message }), { status: 500 });
+  } catch (err: any) {
+    console.error("[OMA] REAL API IGNITION FAILURE:", err);
+    savePocProject({ id: projectId, status: 'ERROR', progress: 0 });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }

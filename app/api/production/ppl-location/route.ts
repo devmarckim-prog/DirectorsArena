@@ -27,7 +27,7 @@ export async function POST(
       .limit(1)
       .single();
 
-    const modelId = adminSettings?.model_id_fast || 'claude-3-5-haiku-20241022';
+    const modelId = adminSettings?.model_id_fast || 'claude-haiku-4-5-20251001';
     const systemPrompt = adminSettings?.prompt_prod_ppl_location || 'Identify PPL opportunities and recommend location queries.';
 
     // 2. Fetch Script Content

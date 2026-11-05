@@ -27,7 +27,7 @@ export async function POST(
       .limit(1)
       .single();
 
-    const modelId = adminSettings?.model_id_primary || 'claude-3-5-sonnet-20241022';
+    const modelId = adminSettings?.model_id_primary || 'claude-sonnet-4-6';
     const systemPrompt = adminSettings?.prompt_prod_breakdown || 'Extract production breakdown per scene from the given script.';
 
     // 2. Fetch Script Content from Episodes
